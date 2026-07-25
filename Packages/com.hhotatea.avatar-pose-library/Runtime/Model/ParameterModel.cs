@@ -42,7 +42,7 @@ namespace com.hhotatea.avatar_pose_library.model
         public int Index { get; set; }
 
         public string DisplayName => string.IsNullOrWhiteSpace(name)
-            ? animationClip?.name ?? string.Empty
+            ? animationClip ? animationClip.name : string.Empty
             : name;
 
         /// <summary>ポーズのインデックスをAnimatorで扱える8ビット単位のフラグに分割します。</summary>

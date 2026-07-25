@@ -128,11 +128,14 @@ namespace com.hhotatea.avatar_pose_library.tests
                 pose.animationClip = null;
                 Assert.That(pose.DisplayName, Is.Empty);
 
+                pose.animationClip = firstClip;
+                Object.DestroyImmediate(firstClip);
+                Assert.That(pose.DisplayName, Is.Empty);
             }
             finally
             {
-                Object.DestroyImmediate(firstClip);
-                Object.DestroyImmediate(secondClip);
+                if (firstClip) Object.DestroyImmediate(firstClip);
+                if (secondClip) Object.DestroyImmediate(secondClip);
             }
         }
 
