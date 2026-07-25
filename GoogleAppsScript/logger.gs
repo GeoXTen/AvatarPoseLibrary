@@ -199,14 +199,7 @@ function webhookErrorRequest_(report) {
 function sanitizedErrorReport_(report) {
   const safe = JSON.parse(JSON.stringify(report));
   delete safe.request_type;
-  safe.error_text = redactLocalPaths_(safe.error_text);
   return safe;
-}
-
-function redactLocalPaths_(value) {
-  return String(value || "")
-    .replace(/[A-Za-z]:\\[^\r\n]*/g, "[local-path]")
-    .replace(/\/(?:Users|home)\/[^/\r\n]+\/[^\r\n]*/g, "[local-path]");
 }
 
 function isSuccessfulResponse_(response) {
