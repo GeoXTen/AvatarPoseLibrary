@@ -105,7 +105,7 @@ namespace com.hhotatea.avatar_pose_library.tests
         }
 
         [Test]
-        public void DisplayName_UsesClipNameOnlyWhenNameIsBlank()
+        public void GetDisplayName_UsesCustomClipAndDefaultNamesInPriorityOrder()
         {
             var firstClip = new AnimationClip { name = "First Clip" };
             var secondClip = new AnimationClip { name = "Second Clip" };
@@ -113,24 +113,26 @@ namespace com.hhotatea.avatar_pose_library.tests
             {
                 var pose = new PoseEntry { animationClip = firstClip };
 
-                Assert.That(pose.DisplayName, Is.EqualTo("First Clip"));
+                Assert.That(pose.GetDisplayName(string.Empty), Is.EqualTo("First Clip"));
 
                 pose.animationClip = secondClip;
-                Assert.That(pose.DisplayName, Is.EqualTo("Second Clip"));
+                Assert.That(pose.GetDisplayName(string.Empty), Is.EqualTo("Second Clip"));
 
                 pose.name = "Custom Name";
                 pose.animationClip = firstClip;
-                Assert.That(pose.DisplayName, Is.EqualTo("Custom Name"));
+                Assert.That(pose.GetDisplayName(string.Empty), Is.EqualTo("Custom Name"));
 
                 pose.name = " ";
-                Assert.That(pose.DisplayName, Is.EqualTo("First Clip"));
+                Assert.That(pose.GetDisplayName(string.Empty), Is.EqualTo(" "));
 
+                pose.name = string.Empty;
                 pose.animationClip = null;
-                Assert.That(pose.DisplayName, Is.Empty);
+                Assert.That(pose.GetDisplayName(string.Empty), Is.Empty);
+                Assert.That(pose.GetDisplayName("Default Pose"), Is.EqualTo("Default Pose"));
 
                 pose.animationClip = firstClip;
                 Object.DestroyImmediate(firstClip);
-                Assert.That(pose.DisplayName, Is.Empty);
+                Assert.That(pose.GetDisplayName(string.Empty), Is.Empty);
             }
             finally
             {

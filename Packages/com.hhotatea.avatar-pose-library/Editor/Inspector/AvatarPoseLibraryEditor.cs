@@ -918,7 +918,7 @@ namespace com.hhotatea.avatar_pose_library.editor
                 {
                     var placeholderStyle = new GUIStyle(EditorStyles.textField);
                     placeholderStyle.normal.textColor = EditorStyles.centeredGreyMiniLabel.normal.textColor;
-                    GUI.Label(nameRect, Data.categories[catIdx].poses[poseIdx].DisplayName, placeholderStyle);
+                    GUI.Label(nameRect, Data.categories[catIdx].poses[poseIdx].GetDisplayName(DynamicVariables.Settings.Menu.pose.title), placeholderStyle);
                 }
                 if (GUI.Button(new Rect(rect.x + rect.width - btnW, y, btnW, 20), _closeLabel))
                     SetFoldoutBuffer(Data.categories[catIdx].poses[poseIdx], false);
@@ -926,7 +926,7 @@ namespace com.hhotatea.avatar_pose_library.editor
             else
             {
                 GUI.Label(new Rect(rect.x + 10, y, rect.width - 60, _lineHeight),
-                    Data.categories[catIdx].poses[poseIdx].DisplayName);
+                    Data.categories[catIdx].poses[poseIdx].GetDisplayName(DynamicVariables.Settings.Menu.pose.title));
                 if (GUI.Button(new Rect(rect.x + rect.width - btnW, y, btnW, 20), _openLabel))
                     SetFoldoutBuffer(Data.categories[catIdx].poses[poseIdx], true);
                 return;
