@@ -104,6 +104,38 @@ namespace com.hhotatea.avatar_pose_library.tests
             Assert.That(initial, Has.Length.EqualTo(ConstVariables.HashLong));
         }
 
+        [Test]
+        public void DisplayName_UsesClipNameOnlyWhenNameIsBlank()
+        {
+            var firstClip = new AnimationClip { name = "First Clip" };
+            var secondClip = new AnimationClip { name = "Second Clip" };
+            try
+            {
+                var pose = new PoseEntry { animationClip = firstClip };
+
+                Assert.That(pose.DisplayName, Is.EqualTo("First Clip"));
+
+                pose.animationClip = secondClip;
+                Assert.That(pose.DisplayName, Is.EqualTo("Second Clip"));
+
+                pose.name = "Custom Name";
+                pose.animationClip = firstClip;
+                Assert.That(pose.DisplayName, Is.EqualTo("Custom Name"));
+
+                pose.name = " ";
+                Assert.That(pose.DisplayName, Is.EqualTo("First Clip"));
+
+                pose.animationClip = null;
+                Assert.That(pose.DisplayName, Is.Empty);
+
+            }
+            finally
+            {
+                Object.DestroyImmediate(firstClip);
+                Object.DestroyImmediate(secondClip);
+            }
+        }
+
         private static AvatarPoseData CreateData(string name, params PoseEntry[] poses)
         {
             return new AvatarPoseData

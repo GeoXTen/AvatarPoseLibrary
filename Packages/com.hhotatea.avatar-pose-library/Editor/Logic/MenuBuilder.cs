@@ -76,7 +76,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                 // 各ポーズステート
                 foreach (var pose in category.poses)
                 {
-                    var item = new GameObject(pose.name);
+                    var item = new GameObject(pose.DisplayName);
                     item.transform.SetParent(folder.transform);
                     if (pose.target != null)
                     {
