@@ -40,7 +40,7 @@ namespace com.hhotatea.avatar_pose_library.tests
         [TestCase(1073741824, "1 GB")]
         public void FormatBytes_UsesReadableBinaryUnits(long bytes, string expected)
         {
-            Assert.That(CacheMenu.FormatBytes(bytes), Is.EqualTo(expected));
+            Assert.That(CacheMenu.FormatBytes(bytes, "Unknown"), Is.EqualTo(expected));
         }
     }
 }

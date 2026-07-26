@@ -108,6 +108,17 @@ namespace com.hhotatea.avatar_pose_library.component
         public string telemetryResetButton = "Reset";
         public string telemetryCancelButton = "Cancel";
 
+        public string cacheDialogTitle = "Avatar Pose Library";
+        [Multiline] public string cacheUnsafePathMessage = "The configured cache path is unsafe and was not deleted.\n\nPath: {0}";
+        [Multiline] public string cacheNotFoundMessage = "No APL cache was found.\n\nPath: {0}";
+        [Multiline] public string cacheDeleteConfirmMessage = "Delete all APL caches?\n\nPath: {0}\nAssets: {1}\nSize: {2}\n\nDeleted caches will be regenerated the next time an avatar is built.";
+        public string cacheDeleteButton = "Delete";
+        public string cacheCancelButton = "Cancel";
+        [Multiline] public string cacheDeleteFailedMessage = "Failed to delete the APL cache.\n\nPath: {0}";
+        [Multiline] public string cacheDeleteSuccessMessage = "Deleted all APL caches.\n\nAssets: {0}\nSize: {1}";
+        public string cacheOkButton = "OK";
+        public string cacheUnknownSize = "Unknown";
+
         public Texture2D thumbnailBg;
 
         public string headTrackingOption = "Head Lock";

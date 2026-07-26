@@ -12,13 +12,14 @@ namespace com.hhotatea.avatar_pose_library.editor
         [MenuItem(MenuPath, false, 200)]
         private static void ClearAllCaches()
         {
+            var context = DynamicVariables.Settings.Inspector;
             var cachePath = NormalizeCachePath(DynamicVariables.Settings.cachePath);
             if (!IsSafeCachePath(cachePath))
             {
                 EditorUtility.DisplayDialog(
-                    "Avatar Pose Library",
-                    $"The configured cache path is unsafe and was not deleted.\n\nPath: {cachePath}",
-                    "OK");
+                    context.cacheDialogTitle,
+                    string.Format(context.cacheUnsafePathMessage, cachePath),
+                    context.cacheOkButton);
                 Debug.LogError(
                     $"AvatarPoseLibrary.CacheMenu: Refused to delete unsafe cache path: {cachePath}");
                 return;
@@ -27,22 +28,24 @@ namespace com.hhotatea.avatar_pose_library.editor
             if (!AssetDatabase.IsValidFolder(cachePath))
             {
                 EditorUtility.DisplayDialog(
-                    "Avatar Pose Library",
-                    $"No APL cache was found.\n\nPath: {cachePath}",
-                    "OK");
+                    context.cacheDialogTitle,
+                    string.Format(context.cacheNotFoundMessage, cachePath),
+                    context.cacheOkButton);
                 return;
             }
 
             var assetCount = AssetDatabase.FindAssets(string.Empty, new[] { cachePath }).Length;
             var cacheSize = GetDirectorySize(cachePath);
-            var formattedCacheSize = FormatBytes(cacheSize);
+            var formattedCacheSize = FormatBytes(cacheSize, context.cacheUnknownSize);
             if (!EditorUtility.DisplayDialog(
-                    "Avatar Pose Library",
-                    $"Delete all APL caches?\n\nPath: {cachePath}\nAssets: {assetCount}\n" +
-                    $"Size: {formattedCacheSize}\n\n" +
-                    "Deleted caches will be regenerated the next time an avatar is built.",
-                    "Delete",
-                    "Cancel"))
+                    context.cacheDialogTitle,
+                    string.Format(
+                        context.cacheDeleteConfirmMessage,
+                        cachePath,
+                        assetCount,
+                        formattedCacheSize),
+                    context.cacheDeleteButton,
+                    context.cacheCancelButton))
             {
                 return;
             }
@@ -52,9 +55,9 @@ namespace com.hhotatea.avatar_pose_library.editor
                 Debug.LogError(
                     $"AvatarPoseLibrary.CacheMenu: Failed to delete cache folder: {cachePath}");
                 EditorUtility.DisplayDialog(
-                    "Avatar Pose Library",
-                    $"Failed to delete the APL cache.\n\nPath: {cachePath}",
-                    "OK");
+                    context.cacheDialogTitle,
+                    string.Format(context.cacheDeleteFailedMessage, cachePath),
+                    context.cacheOkButton);
                 return;
             }
 
@@ -62,9 +65,12 @@ namespace com.hhotatea.avatar_pose_library.editor
             Debug.Log(
                 $"AvatarPoseLibrary.CacheMenu: Deleted {assetCount} cached assets from {cachePath}");
             EditorUtility.DisplayDialog(
-                "Avatar Pose Library",
-                $"Deleted all APL caches.\n\nAssets: {assetCount}\nSize: {formattedCacheSize}",
-                "OK");
+                context.cacheDialogTitle,
+                string.Format(
+                    context.cacheDeleteSuccessMessage,
+                    assetCount,
+                    formattedCacheSize),
+                context.cacheOkButton);
         }
 
         public static string NormalizeCachePath(string path)
@@ -113,9 +119,9 @@ namespace com.hhotatea.avatar_pose_library.editor
             }
         }
 
-        public static string FormatBytes(long bytes)
+        public static string FormatBytes(long bytes, string unknownSize)
         {
-            if (bytes < 0) return "Unknown";
+            if (bytes < 0) return unknownSize;
 
             var units = new[] { "B", "KB", "MB", "GB", "TB" };
             double size = bytes;
