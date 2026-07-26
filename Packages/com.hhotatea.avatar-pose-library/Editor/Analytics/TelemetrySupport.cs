@@ -19,6 +19,15 @@ namespace com.hhotatea.avatar_pose_library.editor
     {
         private static Version latestVersion;
         private static bool isFetching;
+        private static string websiteUrl = string.Empty;
+        private static string shopsUrl = string.Empty;
+        private static string donateUrl = string.Empty;
+        private static string communityUrl = string.Empty;
+
+        public static string WebsiteUrl => websiteUrl;
+        public static string ShopsUrl => shopsUrl;
+        public static string DonateUrl => donateUrl;
+        public static string CommunityUrl => communityUrl;
 
         public static Version Get(Version currentVersion)
         {
@@ -73,6 +82,10 @@ namespace com.hhotatea.avatar_pose_library.editor
 
                     var response = JsonUtility.FromJson<VersionResponse>(
                         request.downloadHandler.text);
+                    websiteUrl = response?.website_url ?? string.Empty;
+                    shopsUrl = response?.shops_url ?? string.Empty;
+                    donateUrl = response?.donate_url ?? string.Empty;
+                    communityUrl = response?.community_url ?? string.Empty;
                     latestVersion = Version.TryParse(
                         response?.version,
                         out var parsed)
@@ -96,6 +109,10 @@ namespace com.hhotatea.avatar_pose_library.editor
         private sealed class VersionResponse
         {
             public string version;
+            public string website_url;
+            public string shops_url;
+            public string donate_url;
+            public string community_url;
         }
     }
 

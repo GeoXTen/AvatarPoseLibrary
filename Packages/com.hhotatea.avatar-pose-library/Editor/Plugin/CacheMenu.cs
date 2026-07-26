@@ -7,7 +7,24 @@ namespace com.hhotatea.avatar_pose_library.editor
 {
     public static class CacheMenu
     {
+        private const string WebsiteMenuPath =
+            "Tools/Avatar Pose Library/Official Website";
         private const string MenuPath = "Tools/Avatar Pose Library/Clear All Caches";
+
+        [MenuItem(WebsiteMenuPath, false, 2000)]
+        private static void OpenOfficialWebsite()
+        {
+            var url = DynamicVariables.WebsiteUrl;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || uri.Scheme != Uri.UriSchemeHttps)
+            {
+                Debug.LogWarning(
+                    "AvatarPoseLibrary: The official website URL is unavailable.");
+                return;
+            }
+
+            Application.OpenURL(uri.AbsoluteUri);
+        }
 
         [MenuItem(MenuPath, false, 200)]
         private static void ClearAllCaches()
