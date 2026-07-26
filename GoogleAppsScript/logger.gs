@@ -9,9 +9,10 @@ function doGet(e) {
     return jsonResponse_({ error: "version_sheet_not_found" });
   }
 
+  const settings = settings_();
   let telemetryResult;
   try {
-    telemetryResult = handleSession_(e, settings_());
+    telemetryResult = handleSession_(e, settings);
   } catch (_) {
     // Telemetry must never break the version endpoint.
     telemetryResult = failure_("internal_error");
@@ -19,6 +20,10 @@ function doGet(e) {
 
   const output = {
     version: version,
+    website_url: settings.websiteUrl,
+    shops_url: settings.shopsUrl,
+    donate_url: settings.donateUrl,
+    community_url: settings.communityUrl,
     telemetry_ok: telemetryResult.ok,
   };
   if (!telemetryResult.ok) {
@@ -68,6 +73,10 @@ function settings_() {
     measurementId: properties.getProperty("GA4_MEASUREMENT_ID"),
     apiSecret: properties.getProperty("GA4_API_SECRET"),
     errorWebhookUrl: properties.getProperty("ERROR_WEBHOOK_URL"),
+    websiteUrl: properties.getProperty("WEBSITE_URL") || "",
+    shopsUrl: properties.getProperty("SHOPS_URL") || "",
+    donateUrl: properties.getProperty("DONATE_URL") || "",
+    communityUrl: properties.getProperty("COMMUNITY_URL") || "",
     legacyClientId: properties.getProperty("GA4_LEGACY_CLIENT_ID")
       || DEFAULTS.LEGACY_CLIENT_ID,
   };

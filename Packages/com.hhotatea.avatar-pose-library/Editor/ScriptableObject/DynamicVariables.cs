@@ -18,6 +18,10 @@ namespace com.hhotatea.avatar_pose_library.editor
             Settings.TelemetryConfiguration;
         public static Version CurrentVersion => GetCurrentVersion();
         public static Version LatestVersion => LatestVersionService.Get(CurrentVersion);
+        public static string WebsiteUrl => LatestVersionService.WebsiteUrl;
+        public static string ShopsUrl => LatestVersionService.ShopsUrl;
+        public static string DonateUrl => LatestVersionService.DonateUrl;
+        public static string CommunityUrl => LatestVersionService.CommunityUrl;
 
         private static AvatarPoseSettings GetSettings()
         {
