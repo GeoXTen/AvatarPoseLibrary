@@ -121,7 +121,7 @@ GASはGA4への送信時に、広告用途の同意状態として `ad_user_data
 | `build_stage` | string | 例外が発生したAPLビルド処理の段階 |
 | `build_duration_ms` | integer | APLビルドの経過時間（ミリ秒） |
 | `exception_type` | string | 例外型の完全名 |
-| `error_text` | string | 例外の文字列表現。GAS中継時にローカルパスを伏せ字化 |
+| `error_text` | string | 例外の文字列表現 |
 | `error_text_truncated` | integer | エラー本文を短縮した場合は `1`、それ以外は `0` |
 | `stack_frames` | string[] | 型名とメソッド名のみのスタックフレーム |
 | `component_count` | integer | 有効なAPLコンポーネント数 |
@@ -167,5 +167,3 @@ GASはGA4への送信時に、広告用途の同意状態として `ad_user_data
 ## 送信しない情報
 
 現在の実装では、氏名、VRChatアカウント情報、アバター名、GameObject名、APLデータ名、カテゴリ名、ポーズ名、アセットパスをテレメトリ項目として送信しません。
-
-エラー本文に含まれるWindowsドライブパス、および `/Users`・`/home` 以下のパスは、Webhookへ中継する前にGASで `[local-path]` へ置換します。

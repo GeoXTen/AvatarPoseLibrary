@@ -867,7 +867,7 @@ namespace com.hhotatea.avatar_pose_library.editor
                 {
                     var newPose = new PoseEntry
                     {
-                        name = DynamicVariables.Settings.Menu.pose.title,
+                        name = string.Empty,
                         thumbnail = DynamicVariables.Settings.Menu.pose.thumbnail,
                         autoThumbnail = true,
                     };
@@ -906,16 +906,27 @@ namespace com.hhotatea.avatar_pose_library.editor
             float btnW = Mathf.Max(GUI.skin.button.CalcSize(_closeLabel).x, GUI.skin.button.CalcSize(_openLabel).x) + 2;
             if (GetFoldoutBuffer(Data.categories[catIdx].poses[poseIdx]))
             {
-                string newName = GUI.TextField(new Rect(rect.x + 10, y, Mathf.Min(TextBoxWidth, rect.width - 60), _lineHeight),
-                                               poseProp.FindPropertyRelative("name").stringValue);
-                if (newName != poseProp.FindPropertyRelative("name").stringValue)
-                    Apply("Rename Pose", () => poseProp.FindPropertyRelative("name").stringValue = newName);
+                var nameRect = new Rect(rect.x + 10, y, Mathf.Min(TextBoxWidth, rect.width - 60), _lineHeight);
+                var nameProp = poseProp.FindPropertyRelative("name");
+                string nameControl = $"APL_PoseName_{catIdx}_{poseIdx}";
+                GUI.SetNextControlName(nameControl);
+                string newName = GUI.TextField(nameRect, nameProp.stringValue);
+                if (newName != nameProp.stringValue)
+                    Apply("Rename Pose", () => nameProp.stringValue = newName);
+                if (string.IsNullOrWhiteSpace(nameProp.stringValue) &&
+                    GUI.GetNameOfFocusedControl() != nameControl)
+                {
+                    var placeholderStyle = new GUIStyle(EditorStyles.textField);
+                    placeholderStyle.normal.textColor = EditorStyles.centeredGreyMiniLabel.normal.textColor;
+                    GUI.Label(nameRect, Data.categories[catIdx].poses[poseIdx].GetDisplayName(DynamicVariables.Settings.Menu.pose.title), placeholderStyle);
+                }
                 if (GUI.Button(new Rect(rect.x + rect.width - btnW, y, btnW, 20), _closeLabel))
                     SetFoldoutBuffer(Data.categories[catIdx].poses[poseIdx], false);
             }
             else
             {
-                GUI.Label(new Rect(rect.x + 10, y, rect.width - 60, _lineHeight), poseProp.FindPropertyRelative("name").stringValue);
+                GUI.Label(new Rect(rect.x + 10, y, rect.width - 60, _lineHeight),
+                    Data.categories[catIdx].poses[poseIdx].GetDisplayName(DynamicVariables.Settings.Menu.pose.title));
                 if (GUI.Button(new Rect(rect.x + rect.width - btnW, y, btnW, 20), _openLabel))
                     SetFoldoutBuffer(Data.categories[catIdx].poses[poseIdx], true);
                 return;
@@ -1025,7 +1036,7 @@ namespace com.hhotatea.avatar_pose_library.editor
             // 初期値の設定
             p.FindPropertyRelative("thumbnail").objectReferenceValue = DynamicVariables.Settings.Menu.pose.thumbnail;
             p.FindPropertyRelative("animationClip").objectReferenceValue = clip;
-            p.FindPropertyRelative("name").stringValue = DynamicVariables.Settings.Menu.pose.title;
+            p.FindPropertyRelative("name").stringValue = string.Empty;
 
             p.FindPropertyRelative("autoThumbnail").boolValue = true;
 
@@ -1055,8 +1066,6 @@ namespace com.hhotatea.avatar_pose_library.editor
 
             if (clip)
             {
-                p.FindPropertyRelative("name").stringValue = clip.name;
-
                 // アニメーション種別による初期値
                 bool moving = MotionBuilder.IsMoveAnimation(clip);
                 tr.FindPropertyRelative("motionSpeed").floatValue = moving ? 1f : 0f;
@@ -1088,7 +1097,6 @@ namespace com.hhotatea.avatar_pose_library.editor
             {
                 poseProp.FindPropertyRelative("animationClip").objectReferenceValue = clip;
                 if (!clip) return;
-                poseProp.FindPropertyRelative("name").stringValue = clip.name;
                 var tr = poseProp.FindPropertyRelative("tracking");
                 bool moving = MotionBuilder.IsMoveAnimation(clip);
                 tr.FindPropertyRelative("motionSpeed").floatValue = moving ? 1f : 0f;
