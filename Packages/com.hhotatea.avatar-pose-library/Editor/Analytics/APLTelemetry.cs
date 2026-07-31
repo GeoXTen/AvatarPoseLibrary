@@ -229,7 +229,7 @@ namespace com.hhotatea.avatar_pose_library.editor
             out APLTelemetryConfiguration configuration)
         {
             configuration = DynamicVariables.TelemetryConfiguration;
-            return TelemetryPreferences.HasSelection
+            return TelemetryPreferences.IsDetailed
                    && configuration != null
                    && configuration.CanSendLogs
                    && !string.IsNullOrWhiteSpace(

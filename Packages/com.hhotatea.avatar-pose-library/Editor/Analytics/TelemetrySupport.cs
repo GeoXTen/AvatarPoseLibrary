@@ -36,8 +36,9 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return latestVersion;
             }
 
-            // The version request also records the editor session.
-            if (TelemetryPreferences.HasSelection && !isFetching)
+            // The version request always records the editor session. Other
+            // telemetry events still require explicit detailed consent.
+            if (!isFetching)
             {
                 isFetching = true;
                 _ = Fetch(currentVersion);

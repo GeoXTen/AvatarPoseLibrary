@@ -43,16 +43,20 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return;
             }
 
+            // Version acquisition, including its session-start event, is
+            // independent of the telemetry consent choice.
+            _ = DynamicVariables.LatestVersion;
+
             if (TelemetryPreferences.RequiresChoice(configuration))
             {
-                ShowPrivacyChoice(false);
+                ShowPrivacyChoice();
                 return;
             }
 
             FinishInitialization(true);
         }
 
-        public static void ShowPrivacyChoice(bool allowCancel)
+        public static void ShowPrivacyChoice()
         {
             var configuration = DynamicVariables.TelemetryConfiguration;
             if (configuration == null)
@@ -61,26 +65,14 @@ namespace com.hhotatea.avatar_pose_library.editor
             }
 
             var inspector = DynamicVariables.Settings.Inspector;
-            var result = EditorUtility.DisplayDialogComplex(
+            var accepted = EditorUtility.DisplayDialog(
                 inspector.telemetryPrivacyDialogTitle,
                 inspector.telemetryPrivacyDialogMessage,
                 inspector.telemetryDetailedConsentButton,
-                inspector.telemetryPrivacyPolicyButton,
                 inspector.telemetryMinimalConsentButton);
 
-            if (result == 1)
-            {
-                OpenPrivacyPolicy(configuration);
-                if (!allowCancel || TelemetryPreferences.RequiresChoice(configuration))
-                {
-                    EditorApplication.delayCall += () => ShowPrivacyChoice(allowCancel);
-                }
-
-                return;
-            }
-
             TelemetryPreferences.SetMode(
-                result == 0 ? TelemetryMode.Detailed : TelemetryMode.Minimal,
+                accepted ? TelemetryMode.Detailed : TelemetryMode.Minimal,
                 configuration);
 
             if (!SessionState.GetBool(SessionInitializedKey, false))
@@ -105,37 +97,17 @@ namespace com.hhotatea.avatar_pose_library.editor
 
             var configuration = DynamicVariables.TelemetryConfiguration;
             var inspector = DynamicVariables.Settings.Inspector;
-            var result = EditorUtility.DisplayDialogComplex(
+            var accepted = EditorUtility.DisplayDialog(
                 inspector.telemetryErrorDialogTitle,
                 inspector.telemetryErrorDialogMessage,
                 inspector.telemetryYesButton,
-                inspector.telemetryPrivacyPolicyButton,
                 inspector.telemetryNoButton);
-
-            if (result == 1)
-            {
-                OpenPrivacyPolicy(configuration);
-                EditorApplication.delayCall += () => RequestDetailedErrorConsent(completed);
-                return;
-            }
-
-            var accepted = result == 0;
             if (accepted)
             {
                 TelemetryPreferences.SetMode(TelemetryMode.Detailed, configuration);
             }
 
             completed?.Invoke(accepted);
-        }
-
-        private static void OpenPrivacyPolicy(
-            APLTelemetryConfiguration configuration)
-        {
-            if (configuration != null
-                && !string.IsNullOrWhiteSpace(configuration.PrivacyPolicyUrl))
-            {
-                Application.OpenURL(configuration.PrivacyPolicyUrl);
-            }
         }
 
         private static void FinishInitialization(bool startSession)
