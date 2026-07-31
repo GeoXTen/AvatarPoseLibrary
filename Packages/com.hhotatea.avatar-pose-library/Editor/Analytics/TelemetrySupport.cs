@@ -245,13 +245,25 @@ namespace com.hhotatea.avatar_pose_library.editor
             return new T
             {
                 schema_version = configuration.SchemaVersion,
-                telemetry_mode =
-                    TelemetryPreferences.IsDetailed ? "detailed" : "minimal",
+                telemetry_mode = TelemetryModeName(),
                 event_name = eventName,
                 client_id = TelemetryPreferences.GetOrCreateClientId(),
                 apl_version = DynamicVariables.CurrentVersion.ToString(),
                 batch_mode = Application.isBatchMode ? 1 : 0
             };
+        }
+
+        private static string TelemetryModeName()
+        {
+            switch (TelemetryPreferences.Mode)
+            {
+                case TelemetryMode.Detailed:
+                    return "detailed";
+                case TelemetryMode.Minimal:
+                    return "minimal";
+                default:
+                    return "none";
+            }
         }
 
         private static void PopulateEnvironment(DetailedSessionEvent payload)

@@ -33,7 +33,7 @@ Unityから送った `event_name` はGA4のイベント名に、`client_id` はG
 | `event_name` | string | 共通 | 上記イベント一覧のイベント名 |
 | `client_id` | string | 共通 | EditorPrefsへ保存する、このPCのAPLクライアントID（32文字のGUID） |
 | `schema_version` | integer | 共通 | UnityからGASへ送るペイロード形式のバージョン |
-| `telemetry_mode` | string | 共通 | `minimal` または `detailed` |
+| `telemetry_mode` | string | 共通 | `none`（未選択）、`minimal`、または `detailed` |
 | `apl_version` | string | 共通 | 実行中のAPLバージョン |
 | `batch_mode` | integer | 共通 | Unityのバッチモードでは `1`、GUIモードでは `0` |
 | `engagement_time_msec` | integer | 共通 | GA4でイベントをエンゲージメント対象にするための値。現在は `1` |
