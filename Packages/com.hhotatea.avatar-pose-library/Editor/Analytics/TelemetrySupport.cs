@@ -249,7 +249,8 @@ namespace com.hhotatea.avatar_pose_library.editor
                     TelemetryPreferences.IsDetailed ? "detailed" : "minimal",
                 event_name = eventName,
                 client_id = TelemetryPreferences.GetOrCreateClientId(),
-                apl_version = DynamicVariables.CurrentVersion.ToString()
+                apl_version = DynamicVariables.CurrentVersion.ToString(),
+                batch_mode = Application.isBatchMode ? 1 : 0
             };
         }
 
@@ -301,6 +302,7 @@ namespace com.hhotatea.avatar_pose_library.editor
             public string event_name;
             public string client_id;
             public string apl_version;
+            public int batch_mode;
         }
 
         [Serializable]

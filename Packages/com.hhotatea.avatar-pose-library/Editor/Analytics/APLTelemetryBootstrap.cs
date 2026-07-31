@@ -29,12 +29,6 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return;
             }
 
-            if (Application.isBatchMode)
-            {
-                FinishInitialization(TelemetryPreferences.HasSelection);
-                return;
-            }
-
             var configuration = DynamicVariables.TelemetryConfiguration;
             if (configuration == null
                 || (!configuration.CanSendLogs && !configuration.CanSendErrors))
@@ -46,6 +40,14 @@ namespace com.hhotatea.avatar_pose_library.editor
             // Version acquisition, including its session-start event, is
             // independent of the telemetry consent choice.
             _ = DynamicVariables.LatestVersion;
+
+            // Batch mode cannot present an interactive consent dialog. The
+            // version request above still records the editor session.
+            if (Application.isBatchMode)
+            {
+                FinishInitialization(TelemetryPreferences.HasSelection);
+                return;
+            }
 
             if (TelemetryPreferences.RequiresChoice(configuration))
             {
