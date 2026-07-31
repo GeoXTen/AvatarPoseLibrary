@@ -36,8 +36,9 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return latestVersion;
             }
 
-            // The version request also records the editor session.
-            if (TelemetryPreferences.HasSelection && !isFetching)
+            // The version request always records the editor session. Other
+            // telemetry events still require explicit detailed consent.
+            if (!isFetching)
             {
                 isFetching = true;
                 _ = Fetch(currentVersion);
@@ -248,7 +249,8 @@ namespace com.hhotatea.avatar_pose_library.editor
                     TelemetryPreferences.IsDetailed ? "detailed" : "minimal",
                 event_name = eventName,
                 client_id = TelemetryPreferences.GetOrCreateClientId(),
-                apl_version = DynamicVariables.CurrentVersion.ToString()
+                apl_version = DynamicVariables.CurrentVersion.ToString(),
+                batch_mode = Application.isBatchMode ? 1 : 0
             };
         }
 
@@ -300,6 +302,7 @@ namespace com.hhotatea.avatar_pose_library.editor
             public string event_name;
             public string client_id;
             public string apl_version;
+            public int batch_mode;
         }
 
         [Serializable]

@@ -29,12 +29,6 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return;
             }
 
-            if (Application.isBatchMode)
-            {
-                FinishInitialization(TelemetryPreferences.HasSelection);
-                return;
-            }
-
             var configuration = DynamicVariables.TelemetryConfiguration;
             if (configuration == null
                 || (!configuration.CanSendLogs && !configuration.CanSendErrors))
@@ -43,16 +37,28 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return;
             }
 
+            // Version acquisition, including its session-start event, is
+            // independent of the telemetry consent choice.
+            _ = DynamicVariables.LatestVersion;
+
+            // Batch mode cannot present an interactive consent dialog. The
+            // version request above still records the editor session.
+            if (Application.isBatchMode)
+            {
+                FinishInitialization(TelemetryPreferences.HasSelection);
+                return;
+            }
+
             if (TelemetryPreferences.RequiresChoice(configuration))
             {
-                ShowPrivacyChoice(false);
+                ShowPrivacyChoice();
                 return;
             }
 
             FinishInitialization(true);
         }
 
-        public static void ShowPrivacyChoice(bool allowCancel)
+        public static void ShowPrivacyChoice()
         {
             var configuration = DynamicVariables.TelemetryConfiguration;
             if (configuration == null)
@@ -61,26 +67,34 @@ namespace com.hhotatea.avatar_pose_library.editor
             }
 
             var inspector = DynamicVariables.Settings.Inspector;
-            var result = EditorUtility.DisplayDialogComplex(
+            TelemetryConsentDialog.Show(
                 inspector.telemetryPrivacyDialogTitle,
                 inspector.telemetryPrivacyDialogMessage,
                 inspector.telemetryDetailedConsentButton,
+                inspector.telemetryMinimalConsentButton,
                 inspector.telemetryPrivacyPolicyButton,
-                inspector.telemetryMinimalConsentButton);
+                () => OpenPrivacyPolicy(configuration),
+                result => CompletePrivacyChoice(result, configuration));
+        }
 
-            if (result == 1)
+        private static void CompletePrivacyChoice(
+            TelemetryConsentDialogResult result,
+            APLTelemetryConfiguration configuration)
+        {
+            if (result == TelemetryConsentDialogResult.Closed)
             {
-                OpenPrivacyPolicy(configuration);
-                if (!allowCancel || TelemetryPreferences.RequiresChoice(configuration))
+                if (!SessionState.GetBool(SessionInitializedKey, false))
                 {
-                    EditorApplication.delayCall += () => ShowPrivacyChoice(allowCancel);
+                    FinishInitialization(false);
                 }
 
                 return;
             }
 
             TelemetryPreferences.SetMode(
-                result == 0 ? TelemetryMode.Detailed : TelemetryMode.Minimal,
+                result == TelemetryConsentDialogResult.Primary
+                    ? TelemetryMode.Detailed
+                    : TelemetryMode.Minimal,
                 configuration);
 
             if (!SessionState.GetBool(SessionInitializedKey, false))
@@ -105,21 +119,25 @@ namespace com.hhotatea.avatar_pose_library.editor
 
             var configuration = DynamicVariables.TelemetryConfiguration;
             var inspector = DynamicVariables.Settings.Inspector;
-            var result = EditorUtility.DisplayDialogComplex(
+            TelemetryConsentDialog.Show(
                 inspector.telemetryErrorDialogTitle,
                 inspector.telemetryErrorDialogMessage,
                 inspector.telemetryYesButton,
+                inspector.telemetryNoButton,
                 inspector.telemetryPrivacyPolicyButton,
-                inspector.telemetryNoButton);
+                () => OpenPrivacyPolicy(configuration),
+                result => CompleteDetailedErrorConsent(
+                    result,
+                    completed,
+                    configuration));
+        }
 
-            if (result == 1)
-            {
-                OpenPrivacyPolicy(configuration);
-                EditorApplication.delayCall += () => RequestDetailedErrorConsent(completed);
-                return;
-            }
-
-            var accepted = result == 0;
+        private static void CompleteDetailedErrorConsent(
+            TelemetryConsentDialogResult result,
+            Action<bool> completed,
+            APLTelemetryConfiguration configuration)
+        {
+            var accepted = result == TelemetryConsentDialogResult.Primary;
             if (accepted)
             {
                 TelemetryPreferences.SetMode(TelemetryMode.Detailed, configuration);

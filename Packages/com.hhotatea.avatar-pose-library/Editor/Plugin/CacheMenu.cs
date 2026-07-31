@@ -9,17 +9,33 @@ namespace com.hhotatea.avatar_pose_library.editor
     {
         private const string WebsiteMenuPath =
             "Tools/Avatar Pose Library/Official Website";
+        private const string DonateMenuPath =
+            "Tools/Avatar Pose Library/Donate APL!!";
         private const string MenuPath = "Tools/Avatar Pose Library/Clear All Caches";
 
         [MenuItem(WebsiteMenuPath, false, 2000)]
         private static void OpenOfficialWebsite()
         {
-            var url = DynamicVariables.WebsiteUrl;
+            OpenExternalUrl(
+                DynamicVariables.WebsiteUrl,
+                "official website");
+        }
+
+        [MenuItem(DonateMenuPath, false, 2001)]
+        private static void OpenDonatePage()
+        {
+            OpenExternalUrl(
+                DynamicVariables.DonateUrl,
+                "donation page");
+        }
+
+        private static void OpenExternalUrl(string url, string description)
+        {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
                 || uri.Scheme != Uri.UriSchemeHttps)
             {
                 Debug.LogWarning(
-                    "AvatarPoseLibrary: The official website URL is unavailable.");
+                    $"AvatarPoseLibrary: The {description} URL is unavailable.");
                 return;
             }
 

@@ -64,11 +64,6 @@ namespace com.hhotatea.avatar_pose_library.editor
 
         public static string GetOrCreateClientId()
         {
-            if (!HasSelection)
-            {
-                return string.Empty;
-            }
-
             var value = EditorPrefs.GetString(ClientIdKey, string.Empty);
             if (!string.IsNullOrWhiteSpace(value))
             {
@@ -97,7 +92,7 @@ namespace com.hhotatea.avatar_pose_library.editor
         [MenuItem("Tools/Avatar Pose Library/Privacy Settings")]
         private static void OpenPrivacySettings()
         {
-            APLTelemetryBootstrap.ShowPrivacyChoice(true);
+            APLTelemetryBootstrap.ShowPrivacyChoice();
         }
 
         [MenuItem("Tools/Avatar Pose Library/Reset analytics and consent")]

@@ -88,6 +88,7 @@ function sessionInputFromGet_(e) {
     return null;
   }
   input.schema_version = Number(input.schema_version);
+  if ("batch_mode" in input) input.batch_mode = Number(input.batch_mode);
   if ("session_id" in input) input.session_id = Number(input.session_id);
   if ("engagement_time_msec" in input) {
     input.engagement_time_msec = Number(input.engagement_time_msec);

@@ -35,6 +35,7 @@ Unityから送った `event_name` はGA4のイベント名に、`client_id` はG
 | `schema_version` | integer | 共通 | UnityからGASへ送るペイロード形式のバージョン |
 | `telemetry_mode` | string | 共通 | `minimal` または `detailed` |
 | `apl_version` | string | 共通 | 実行中のAPLバージョン |
+| `batch_mode` | integer | 共通 | Unityのバッチモードでは `1`、GUIモードでは `0` |
 | `engagement_time_msec` | integer | 共通 | GA4でイベントをエンゲージメント対象にするための値。現在は `1` |
 
 GASはGA4への送信時に、広告用途の同意状態として `ad_user_data` と `ad_personalization` を `DENIED` に設定します。
