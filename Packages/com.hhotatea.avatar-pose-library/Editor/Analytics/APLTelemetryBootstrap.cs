@@ -65,14 +65,34 @@ namespace com.hhotatea.avatar_pose_library.editor
             }
 
             var inspector = DynamicVariables.Settings.Inspector;
-            var accepted = EditorUtility.DisplayDialog(
+            TelemetryConsentDialog.Show(
                 inspector.telemetryPrivacyDialogTitle,
                 inspector.telemetryPrivacyDialogMessage,
                 inspector.telemetryDetailedConsentButton,
-                inspector.telemetryMinimalConsentButton);
+                inspector.telemetryMinimalConsentButton,
+                inspector.telemetryPrivacyPolicyButton,
+                () => OpenPrivacyPolicy(configuration),
+                result => CompletePrivacyChoice(result, configuration));
+        }
+
+        private static void CompletePrivacyChoice(
+            TelemetryConsentDialogResult result,
+            APLTelemetryConfiguration configuration)
+        {
+            if (result == TelemetryConsentDialogResult.Closed)
+            {
+                if (!SessionState.GetBool(SessionInitializedKey, false))
+                {
+                    FinishInitialization(false);
+                }
+
+                return;
+            }
 
             TelemetryPreferences.SetMode(
-                accepted ? TelemetryMode.Detailed : TelemetryMode.Minimal,
+                result == TelemetryConsentDialogResult.Primary
+                    ? TelemetryMode.Detailed
+                    : TelemetryMode.Minimal,
                 configuration);
 
             if (!SessionState.GetBool(SessionInitializedKey, false))
@@ -97,17 +117,41 @@ namespace com.hhotatea.avatar_pose_library.editor
 
             var configuration = DynamicVariables.TelemetryConfiguration;
             var inspector = DynamicVariables.Settings.Inspector;
-            var accepted = EditorUtility.DisplayDialog(
+            TelemetryConsentDialog.Show(
                 inspector.telemetryErrorDialogTitle,
                 inspector.telemetryErrorDialogMessage,
                 inspector.telemetryYesButton,
-                inspector.telemetryNoButton);
+                inspector.telemetryNoButton,
+                inspector.telemetryPrivacyPolicyButton,
+                () => OpenPrivacyPolicy(configuration),
+                result => CompleteDetailedErrorConsent(
+                    result,
+                    completed,
+                    configuration));
+        }
+
+        private static void CompleteDetailedErrorConsent(
+            TelemetryConsentDialogResult result,
+            Action<bool> completed,
+            APLTelemetryConfiguration configuration)
+        {
+            var accepted = result == TelemetryConsentDialogResult.Primary;
             if (accepted)
             {
                 TelemetryPreferences.SetMode(TelemetryMode.Detailed, configuration);
             }
 
             completed?.Invoke(accepted);
+        }
+
+        private static void OpenPrivacyPolicy(
+            APLTelemetryConfiguration configuration)
+        {
+            if (configuration != null
+                && !string.IsNullOrWhiteSpace(configuration.PrivacyPolicyUrl))
+            {
+                Application.OpenURL(configuration.PrivacyPolicyUrl);
+            }
         }
 
         private static void FinishInitialization(bool startSession)
