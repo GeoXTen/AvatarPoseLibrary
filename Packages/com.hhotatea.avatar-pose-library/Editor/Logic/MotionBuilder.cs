@@ -450,7 +450,9 @@ namespace com.hhotatea.avatar_pose_library.logic
             result.name = "ResetAnimation";
             if (root == null || anims == null) return result;
 
-            var defaultValueCache = new Dictionary<CurveKey, float>();
+            var bindingIndices = new Dictionary<CurveKey, int>();
+            var resetBindings = new List<EditorCurveBinding>();
+            var resetCurves = new List<AnimationCurve>();
 
             foreach (var anim in anims)
             {
@@ -466,22 +468,36 @@ namespace com.hhotatea.avatar_pose_library.logic
 
                     // rootにおける現在のValueを取得
                     var key = new CurveKey(binding.path, binding.type, binding.propertyName);
-                    if (!defaultValueCache.TryGetValue(key, out var v))
+                    if (bindingIndices.TryGetValue(key, out var existingIndex))
                     {
-                        if (!TryGetDefaultValue(root, binding, out v))
-                        {
-                            LogSkippedBinding(anim.name, binding, "The current value could not be resolved.");
-                            continue;
-                        }
-
-                        defaultValueCache[key] = v;
+                        // Preserve the last binding exactly as SetEditorCurve did when the same
+                        // property appeared in more than one source clip.
+                        resetBindings[existingIndex] = binding;
+                        continue;
                     }
 
-                    var c = new AnimationCurve();
-                    c.AddKey(0f, v);
-                    c.AddKey(1f / 60f, v);
-                    UnityEditor.AnimationUtility.SetEditorCurve(result, binding, c);
+                    if (!TryGetDefaultValue(root, binding, out var value))
+                    {
+                        LogSkippedBinding(anim.name, binding, "The current value could not be resolved.");
+                        continue;
+                    }
+
+                    var curve = new AnimationCurve();
+                    curve.AddKey(0f, value);
+                    curve.AddKey(1f / 60f, value);
+
+                    bindingIndices.Add(key, resetBindings.Count);
+                    resetBindings.Add(binding);
+                    resetCurves.Add(curve);
                 }
+            }
+
+            if (resetBindings.Count > 0)
+            {
+                UnityEditor.AnimationUtility.SetEditorCurves(
+                    result,
+                    resetBindings.ToArray(),
+                    resetCurves.ToArray());
             }
             return result;
         }
