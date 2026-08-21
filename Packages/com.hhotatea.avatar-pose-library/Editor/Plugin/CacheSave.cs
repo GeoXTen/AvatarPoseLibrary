@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor.Animations;
 using com.hhotatea.avatar_pose_library.component;
@@ -93,9 +94,8 @@ namespace com.hhotatea.avatar_pose_library.editor
         /// </summary>
         private static bool HasInvalidTrackingControl(AnimatorController fxAnimator)
         {
-            // TODO: Remove this heuristic after the source of external TrackingControl changes
-            // is identified and fixed. Until then, a missing control or Head=NoChange means the
-            // cache is unsafe to reuse and must be rebuilt.
+            // Keep rejecting caches that were corrupted before cached animator controllers were
+            // isolated from downstream build plugins.
             foreach (var layer in fxAnimator.layers)
             {
                 if (!layer.name.Contains(ConstVariables.HeadParamPrefix))
@@ -136,14 +136,88 @@ namespace com.hhotatea.avatar_pose_library.editor
             {
                 return null;
             }
+            var clonedObjects = new Dictionary<Object, Object>();
             var asset = ScriptableObject.CreateInstance<CacheModel>();
-            asset.locomotionLayer = cacheAsset.locomotionLayer;
-            asset.paramLayer = cacheAsset.paramLayer;
-            asset.trackingLayer = cacheAsset.trackingLayer;
+            asset.locomotionLayer = CloneAnimatorForBuild(cacheAsset.locomotionLayer, clonedObjects);
+            asset.paramLayer = CloneAnimatorForBuild(cacheAsset.paramLayer, clonedObjects);
+            asset.trackingLayer = CloneAnimatorForBuild(cacheAsset.trackingLayer, clonedObjects);
             asset.menuObject = Object.Instantiate(cacheAsset.menuObject);
             asset.menuObject.name = cacheAsset.libraryName;
             asset.paramObject = Object.Instantiate(cacheAsset.paramObject);
             return asset;
+        }
+
+        /// <summary>
+        /// Creates a transient animator graph for the current build. Only objects stored in this
+        /// cache asset are cloned; user-authored motions and other external assets stay shared.
+        /// </summary>
+        private AnimatorController CloneAnimatorForBuild(
+            AnimatorController animator,
+            Dictionary<Object, Object> clonedObjects)
+        {
+            return CloneCachedObject(animator, clonedObjects) as AnimatorController;
+        }
+
+        private Object CloneCachedObject(Object source, Dictionary<Object, Object> clonedObjects)
+        {
+            if (!source)
+            {
+                return null;
+            }
+
+            if (clonedObjects.TryGetValue(source, out var existingClone))
+            {
+                return existingClone;
+            }
+
+            var sourcePath = NormalizeAssetPath(AssetDatabase.GetAssetPath(source));
+            if (sourcePath != NormalizeAssetPath(filePath) || !IsAnimatorGraphObject(source))
+            {
+                return source;
+            }
+
+            var clone = Object.Instantiate(source);
+            clone.name = source.name;
+            clonedObjects.Add(source, clone);
+
+            var serializedClone = new SerializedObject(clone);
+            var property = serializedClone.GetIterator();
+            var enterChildren = true;
+            while (property.Next(enterChildren))
+            {
+                enterChildren = property.propertyType != SerializedPropertyType.String;
+                if (property.propertyType != SerializedPropertyType.ObjectReference)
+                {
+                    continue;
+                }
+
+                var referencedObject = property.objectReferenceValue;
+                if (!referencedObject || referencedObject == clone)
+                {
+                    continue;
+                }
+
+                property.objectReferenceValue = CloneCachedObject(referencedObject, clonedObjects);
+            }
+            serializedClone.ApplyModifiedPropertiesWithoutUndo();
+
+            return clone;
+        }
+
+        private static bool IsAnimatorGraphObject(Object asset)
+        {
+            return asset is AnimatorController ||
+                   asset is AnimatorStateMachine ||
+                   asset is AnimatorState ||
+                   asset is AnimatorTransitionBase ||
+                   asset is StateMachineBehaviour ||
+                   asset is Motion ||
+                   asset is AvatarMask;
+        }
+
+        private static string NormalizeAssetPath(string path)
+        {
+            return string.IsNullOrEmpty(path) ? string.Empty : path.Replace('\\', '/');
         }
 
         public bool SaveAsset(CacheModel asset)

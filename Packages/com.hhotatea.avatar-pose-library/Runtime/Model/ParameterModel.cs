@@ -87,6 +87,7 @@ namespace com.hhotatea.avatar_pose_library.model
         public bool enableLocomotionAnimator = true;
         public bool enableFxAnimator = true;
         public bool suppressAdditiveAnimator = true;
+        public string parameterOverride = "";
 
         [Tooltip("Throws a test exception during the APL build pipeline.")]
         public bool debugForceBuildError;
@@ -116,7 +117,9 @@ namespace com.hhotatea.avatar_pose_library.model
         /// <summary>安定したIDと各ポーズのAnimator用の値を再生成します。</summary>
         public AvatarPoseData UpdateParameter()
         {
-            Guid = ToHash();
+            Guid = string.IsNullOrWhiteSpace(parameterOverride)
+                ? ToHash()
+                : parameterOverride;
             var value = ConstVariables.MaxAnimationState + 1;
             var poseIndex = 1;
             var parameterName = "";
@@ -176,6 +179,12 @@ namespace com.hhotatea.avatar_pose_library.model
                         hasSettings = true;
                     }
 
+                    if (string.IsNullOrWhiteSpace(combined.parameterOverride) &&
+                        !string.IsNullOrWhiteSpace(source.parameterOverride))
+                    {
+                        combined.parameterOverride = source.parameterOverride;
+                    }
+
                     combined.categories.AddRange(source.categories ?? Enumerable.Empty<PoseCategory>());
                 }
 
@@ -208,6 +217,7 @@ namespace com.hhotatea.avatar_pose_library.model
             enableLocomotionAnimator = source.enableLocomotionAnimator;
             enableFxAnimator = source.enableFxAnimator;
             suppressAdditiveAnimator = source.suppressAdditiveAnimator;
+            parameterOverride = source.parameterOverride;
         }
 
         /// <summary>生成アセット名とキャッシュキーに使用する短いコンテンツハッシュを返します。</summary>
