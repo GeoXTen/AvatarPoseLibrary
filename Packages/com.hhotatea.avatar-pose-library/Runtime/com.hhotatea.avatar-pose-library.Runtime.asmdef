@@ -1,5 +1,5 @@
 {
-    "name": "com.hhotatea.avatar-pose-library.Mod.Runtime",
+    "name": "com.hhotatea.avatar-pose-library.Runtime",
     "rootNamespace": "",
     "references": [
         "VRC.SDK3A",
