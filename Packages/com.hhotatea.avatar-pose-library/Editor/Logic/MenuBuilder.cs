@@ -72,7 +72,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                     Texture2D thumb = varMenu != null ? varMenu.thumbnail : null;
                     if (thumb == null) thumb = cat != null && cat.thumbnail ? cat.thumbnail : (poseLibrary.thumbnail ? poseLibrary.thumbnail : DynamicVariables.Settings.Menu.pose.thumbnail);
                     string varParam = $"{ConstVariables.VariationParamPrefix}_{poseLibrary.Guid}";
-                    CreateRadialMenu(result.transform, catTitle, thumb, varParam, varParam);
+                    CreateRadialMenu(result.transform, catTitle, thumb, varParam);
                 }
                 else if (poseLibrary.categories != null && poseLibrary.categories.Count > 1)
                 {
@@ -81,7 +81,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                     Texture2D varThumb = varMenu != null ? varMenu.thumbnail : null;
                     if (varThumb == null) varThumb = poseLibrary.thumbnail ? poseLibrary.thumbnail : DynamicVariables.Settings.Menu.pose.thumbnail;
                     string varParam = $"{ConstVariables.VariationParamPrefix}_{poseLibrary.Guid}";
-                    CreateRadialMenu(result.transform, varTitle, varThumb, varParam, varParam);
+                    CreateRadialMenu(result.transform, varTitle, varThumb, varParam);
                 }
                 else
                 {
@@ -89,7 +89,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                     Texture2D varThumb = varMenu != null ? varMenu.thumbnail : null;
                     if (varThumb == null) varThumb = poseLibrary.thumbnail ? poseLibrary.thumbnail : DynamicVariables.Settings.Menu.pose.thumbnail;
                     string varParam = $"{ConstVariables.VariationParamPrefix}_{poseLibrary.Guid}";
-                    CreateRadialMenu(result.transform, varTitle, varThumb, varParam, varParam);
+                    CreateRadialMenu(result.transform, varTitle, varThumb, varParam);
                 }
             }
             else
