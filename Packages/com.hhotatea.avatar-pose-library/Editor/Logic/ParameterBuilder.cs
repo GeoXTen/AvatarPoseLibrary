@@ -19,7 +19,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                     ParameterSyncType.Float,
                     false,
                     0f,
-                    false);
+                    true);
                 // Flags still needed internally for Fx/Locomotion layer signalling but keep them localOnly when in variation mode
                 for (var index = 0; index < ConstVariables.PoseFlagCount; index++)
                 {
