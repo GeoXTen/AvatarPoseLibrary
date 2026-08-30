@@ -35,32 +35,36 @@
 
 ## 📦 導入方法
 
-### 1. VCC 経由 (推奨 - GeoXTen Fork)
+APL は 2つの方法で導入することができます。
+**VCC (VRChat Creator Companion)** 経由の導入がおすすめです。  
 
-1. VCC → **Settings** → **Packages** → **Add Repository**
-2. URL を貼り付け:
+### 1. VCC 経由での導入
+
+1. VCC を開き、**Settings** に移動  
+2. **Packages** タブをクリック  
+3. **Add Repository** をクリック  
+4. 入力欄に以下の URL を貼り付け  
    ```text
-   https://GeoXTen.github.io/AvatarPoseLibrary/index.json
-   ```
-   または VPM で直接追加:
-   ```text
-   https://github.com/GeoXTen/AvatarPoseLibrary
-   ```
-3. **Add** → **I Understand** → プロジェクトの **Manage Project** から `AvatarPoseLibrary 1.2.44` を追加
+   https://HhotateA.github.io/AvatarPoseLibrary/index.json
+   ```  
+5. **Add** をクリック  
+6. リポジトリ情報を確認し、**I Understand** をクリック  
+7. 任意のプロジェクトの **Manage Project** から APL を追加
 
-*オリジナル版を使う場合: `https://HhotateA.github.io/AvatarPoseLibrary/index.json`*
+### 2. UnityPackage 経由での導入
 
-### 2. UnityPackage 経由
-
-1. 依存を追加:
+1. あらかじめ以下の依存パッケージをプロジェクトに追加しておく  
    ```json
-   "com.vrchat.avatars": ">=3.7.0",
-   "nadena.dev.ndmf": ">=1.5.0",
-   "nadena.dev.modular-avatar": ">=1.10.0"
+   "com.vrchat.avatars": "3.8.0",
+   "nadena.dev.ndmf": "1.7.9",
+   "nadena.dev.modular-avatar": "1.12.5"
    ```
-2. `https://github.com/GeoXTen/AvatarPoseLibrary/releases/tag/1.2.44` から `AvatarPoseLibrary_Mod.unitypackage` (2.16 MB) を取得
-3. Unity プロジェクトにドラッグ＆ドロップ → **Import**
-4. 既存導入への上書きで `already exists` が出る場合: `Tools → Avatar Pose Library → Force Replace Install` を使用、または先に `Packages/com.hhotatea.avatar-pose-library` を削除してから Import
+2. 下記 URL から UnityPackage を取得  
+   ```text
+   https://github.com/HhotateA/AvatarPoseLibrary/releases/latest/
+   ```
+3. 任意の Unity プロジェクトを開き、UnityPackage をドラッグ＆ドロップ  
+4. 追加ファイルを確認し、**Import** をクリック
 
 ---
 
