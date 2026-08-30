@@ -10,8 +10,8 @@
 - **パラメーター数を最小限に最適化**  
   複数のメニューを統合し、制御する Int パラメーターを最小限にします.
 
-- **Variation Slider (v1.2.44 新機能)**  
-  チェックボックス1つずつの代わりに **1つの Radial Puppet** (`AnimPoseVariation_{Guid}` Float `0-1`, `saved:true`) ですべてのポーズを操作。`0% = idle/reset`, `1/N` 刻みでポーズを順に選択。カテゴリが1つの場合はメニュー名が `Pose 1 (10)` のようにカテゴリ名と同期。`Enable Variation Slider` で切り替え、従来の Toggle と完全互換.
+- **Variation Slider (v1.2.44 新機能) — make it easy for pose selection**  
+  チェックボックス1つずつの代わりに **1つの Radial Puppet** (`AnimPoseVariation_{Guid}` Float `0-1`, `saved:true`) ですべてのポーズを操作 — **make it easy for pose selection**. `0% = idle/reset`, `1/N` 刻みでポーズを順に選択。カテゴリが1つの場合はメニュー名が `Pose 1 (10)` のようにカテゴリ名と同期。`Enable Variation Slider` で切り替え、従来の Toggle と完全互換.
 
 - **サムネイル撮影機能**  
   アニメーションごとに自動でサムネイルを撮影し、メニュー画像を差し替え可能.
