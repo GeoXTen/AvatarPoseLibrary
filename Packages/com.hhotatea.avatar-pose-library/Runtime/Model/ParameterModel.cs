@@ -88,6 +88,13 @@ namespace com.hhotatea.avatar_pose_library.model
         public bool enableFxAnimator = true;
         public bool suppressAdditiveAnimator = true;
         public bool enableVariationSlider;
+
+        // ポーズ全体の回転を VRChat メニューのラジアルで調整できるようにする。
+        // 回転はポーズへ焼き込まず、アーマチュアの親に挟んだ Transform を
+        // 実行時に回して合成するため（BodyRotationRigBuilder 参照）、
+        // クリップ数はポーズ数に依存しません。
+        public bool enableBodyRotationParam;
+
         public string parameterOverride = "";
 
         [Tooltip("Throws a test exception during the APL build pipeline.")]
@@ -219,8 +226,17 @@ namespace com.hhotatea.avatar_pose_library.model
             enableFxAnimator = source.enableFxAnimator;
             suppressAdditiveAnimator = source.suppressAdditiveAnimator;
             enableVariationSlider = source.enableVariationSlider;
+            enableBodyRotationParam = source.enableBodyRotationParam;
             parameterOverride = source.parameterOverride;
         }
+
+        /// <summary>
+        /// ランタイム回転ラジアルを生成するかどうかを返します。
+        /// ポーズ側に回転の初期値を持たせないため、ラジアルの 0% が常に無補正になります。
+        /// </summary>
+        public bool UseBodyRotationParam =>
+            enableBodyRotationParam &&
+            enableLocomotionAnimator;
 
         /// <summary>生成アセット名とキャッシュキーに使用する短いコンテンツハッシュを返します。</summary>
         public string ToHash()

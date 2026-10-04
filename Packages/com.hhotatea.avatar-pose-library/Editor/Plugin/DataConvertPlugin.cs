@@ -29,6 +29,11 @@ namespace com.hhotatea.avatar_pose_library.editor
                         .GetComponentsInChildren<AvatarPoseLibrary>()
                         .Where(setting => setting.data != null)
                         .ToArray();
+                    // VRCFury は APL より後に走るため、この時点では書き換えを観測できません。
+                    // ただし Auto の Fix Write Defaults は必ず全レイヤーを書き換えるので、
+                    // 設定が残っている時点で警告を出しておけば、原因不明の
+                    // 「体が回らない」を避けられます。
+                    VRCFuryWriteDefaultsGuard.WarnIfConflict(ctx.AvatarRootObject);
                     APLTelemetry.BeginBuild(ctx.AvatarRootObject, settings);
                     try
                     {
@@ -42,6 +47,62 @@ namespace com.hhotatea.avatar_pose_library.editor
                             settings.Select(e => e.data)
                             .ToArray());
 
+                        // 体の回転も高さも、ロコモーションレイヤーの中で組み立てられます。
+                        // ロコモーションを切ったまま「有効にしたのに効かない」状態を
+                        // 黙って作らないよう、ここで知らせます。
+                        foreach (var d in combinedData)
+                        {
+                            if (d.enableLocomotionAnimator)
+                            {
+                                continue;
+                            }
+
+                            var affected = "";
+                            if (d.enableHeightParam)
+                            {
+                                affected += " 'Enable Height'";
+                            }
+                            if (d.enableBodyRotationParam)
+                            {
+                                affected += " 'Enable Body Rotation'";
+                            }
+                            if (affected.Length == 0)
+                            {
+                                continue;
+                            }
+
+                            Debug.LogWarning(
+                                "AvatarPoseLibrary:" + affected
+                                + " is on, but 'Enable Locomotion Animator' is off. "
+                                + "Both are built inside the locomotion layer, so they do nothing. "
+                                + "Turn 'Enable Locomotion Animator' on and rebuild.",
+                                ctx.AvatarRootObject);
+                        }
+
+                        // 体全体の回転はポーズへ焼き込まず、アーマチュア自身の
+                        // localPosition / localRotation を実行時に書いて合成します。
+                        // 支点は Hips で、その補正値はアバターごとに違うため、
+                        // キャッシュには入れずビルドのたびに計算します。
+                        BodyRotationArmatureSolver bodyRotation = null;
+                        if (combinedData.Any(d => d.UseBodyRotationParam))
+                        {
+                            // 制約方式だった頃のリグがシーンに残っている場合に備えて先に片付けます。
+                            BodyRotationRigBuilder.CleanupLegacyRig(ctx.AvatarRootObject);
+
+                            if (!BodyRotationArmatureSolver.TryCreate(
+                                    ctx.AvatarRootObject.transform,
+                                    out bodyRotation,
+                                    out var bodyRotationError))
+                            {
+                                // 原因の分からない「体が回らない」を避けるため、
+                                // 黙って諦めずにはっきり出します。
+                                Debug.LogError(
+                                    "AvatarPoseLibrary: Body rotation is enabled but cannot be built. " +
+                                    bodyRotationError +
+                                    " Body rotation will be disabled for this avatar.");
+                            }
+                        }
+
                         foreach (var d in combinedData)
                         {
                             var go = new GameObject(d.Guid);
@@ -53,7 +114,7 @@ namespace com.hhotatea.avatar_pose_library.editor
                             {
                                 BuildAudioSource(ctx.AvatarRootObject.transform, d);
                             }
-                            BuildRuntimeAnimator(go, assets, d, ctx.AvatarRootObject);
+                            BuildRuntimeAnimator(go, assets, d, ctx.AvatarRootObject, bodyRotation);
                             BuildRuntimeMenu(go, assets, root?.transform, ctx.AvatarRootObject.transform);
                             BuildRuntimeParameter(go, assets);
                         }
@@ -77,11 +138,25 @@ namespace com.hhotatea.avatar_pose_library.editor
                 return CreateAssets(data);
             }
 
-            var cache = new CacheSave(data.ToHash());
+            var cache = new CacheSave($"{data.ToHash()}{ConstVariables.AssetCacheVersion}");
+            if (cache.ExceededSizeLimit)
+            {
+                // A previous build produced a cache larger than the limit. Rebuilding it
+                // would write several gigabytes to disk again, so stay transient instead.
+                return CreateAssets(data);
+            }
+
             var asset = cache.LoadAsset();
             if (asset)
             {
                 return asset;
+            }
+
+            if (cache.ExceededSizeLimit)
+            {
+                // The cache on disk was oversized and has just been removed. Rebuilding it
+                // would only write the same multi-gigabyte asset again.
+                return CreateAssets(data);
             }
 
             asset = CreateAssets(data);
@@ -106,6 +181,11 @@ namespace com.hhotatea.avatar_pose_library.editor
             var overrideWriteDefault = data.writeDefaultType == WriteDefaultType.OverrideTrue;
 
             var cache = ScriptableObject.CreateInstance<CacheModel>();
+            // アーマチュア方式のリグ（BodyRotationRigBuilder）は回転だけを書き、
+            // 高さは従来どおりポーズのクリップが持ちます。リグ側に高さを移す実装は
+            // 無いため、ここは必ず false です。true を渡すと
+            // 「高さはリグが持つ」とみなされ、高さスライダーがどこからも
+            // 駆動されなくなります（AnimatorBuilder.BuildLocomotionAnimator 参照）。
             cache.locomotionLayer = AnimatorBuilder.BuildLocomotionAnimator(data, overrideWriteDefault);
             cache.paramLayer = AnimatorBuilder.BuildFxAnimator(data, overrideWriteDefault);
             cache.trackingLayer = AnimatorBuilder.BuildTrackingAnimator(data, overrideWriteDefault);
@@ -118,7 +198,12 @@ namespace com.hhotatea.avatar_pose_library.editor
         /// <summary>
         /// アニメーターの設定
         /// </summary>
-        void BuildRuntimeAnimator(GameObject obj, CacheModel assets, AvatarPoseData data, GameObject root)
+        void BuildRuntimeAnimator(
+            GameObject obj,
+            CacheModel assets,
+            AvatarPoseData data,
+            GameObject root,
+            BodyRotationArmatureSolver bodyRotation)
         {
             var result = new GameObject();
             var matchAvatarWriteDefaults = data.writeDefaultType == WriteDefaultType.MatchAvatar;
@@ -144,6 +229,26 @@ namespace com.hhotatea.avatar_pose_library.editor
                 fxAnimator,
                 VRCAvatarDescriptor.AnimLayerType.FX,
                 matchAvatarWriteDefaults);
+
+            // リグを作れなかった場合（アーマチュア未検出など）はレイヤーも足しません。
+            // 旧リグは CleanupLegacyRig が削除済みで、この方式はリグの GameObject を
+            // 作らないため、シーンを検索しても判定できません。ソルバーの有無で判定します。
+            if (data.UseBodyRotationParam && bodyRotation != null)
+            {
+                // 体全体の回転。ポーズへ焼き込まず、アーマチュア自身の
+                // localPosition / localRotation を実行時に書いて合成します。
+                // 3 軸は同時に掛け合わさるため、クリップ数は BodyRotationSteps^3 本です
+                // （Steps=5 で 125 本）。ポーズ数には依存しません。
+                //
+                // Write Defaults を必ず false にする必要があるため、
+                // ポーズ側とは別コントローラーとして、WD 自動一致を無効にしてマージします。
+                var ma_rotation = result.AddComponent<ModularAvatarMergeAnimator>();
+                ConfigureMergeAnimator(
+                    ma_rotation,
+                    BodyRotationRigBuilder.BuildAnimator(data, bodyRotation),
+                    VRCAvatarDescriptor.AnimLayerType.FX,
+                    false);
+            }
 
             var ma_tracking = result.AddComponent<ModularAvatarMergeAnimator>();
             ConfigureMergeAnimator(

@@ -28,6 +28,12 @@ namespace com.hhotatea.avatar_pose_library.logic
             var result = BaseAnimator(poseLibrary, writeDefault);
             var builder = new AnimationLayerBuilder(writeDefault, poseLibrary);
 
+            // 体全体の回転（BodyRotationRigBuilder）はアーマチュアの localPosition /
+            // localRotation へ回転だけを書き、高さは持ちません。
+            // 高さは従来どおりポーズのクリップ（AnimationClipSettings.level）が持つため、
+            // ここでは常に焼き込みます。
+            var height = poseLibrary.enableHeightParam;
+
             // レイヤー作成
             if (poseLibrary.enableLocomotionAnimator)
             {
@@ -64,7 +70,10 @@ namespace com.hhotatea.avatar_pose_library.logic
                     foreach (var pose in category.poses)
                     {
                         builder.AddLocomotionLayer(pose, layer, defaultState,
-                            poseLibrary.enableHeightParam, poseLibrary.enableSpeedParam, poseLibrary.enableMirrorParam,
+                            height, poseLibrary.enableSpeedParam, poseLibrary.enableMirrorParam,
+                            // 体の回転はポーズへ焼き込まず、BodyRotationRigBuilder が
+                            // アーマチュアの親 Transform を回して合成します。
+                            false,
                             poseLibrary.Guid);
                     }
                 }
@@ -257,6 +266,19 @@ namespace com.hhotatea.avatar_pose_library.logic
             result.AddLayer(builder.ConstantTrackingLayer(TrackingType.Mirror, $"{ConstVariables.MirrorParamPrefix}_{poseLibrary.Guid}", poseLibrary.Guid));
             result.AddLayer(builder.ResetLayer($"{ConstVariables.ResetParamPrefix}_{poseLibrary.Guid}", poseLibrary));
 
+            if (poseLibrary.UseBodyRotationParam)
+            {
+                // 回転ラジアル専用のリセット。ポーズ選択を維持したまま傾きだけを戻します。
+                result.AddLayer(builder.BodyRotationResetLayer(
+                    $"{ConstVariables.BodyRotationResetParamPrefix}_{poseLibrary.Guid}", poseLibrary));
+
+                // 回転中だけ IK を切り、ポーズの姿勢がそのまま出るようにします。
+                // IK が有効なままだと、傾きが 90 度を超えたあたりで解が反転し、
+                // 体が一瞬別の向きへ飛んでから戻る（スナップする）ように見えます。
+                result.AddLayer(builder.BodyRotationTrackingLayer(
+                    $"{ConstVariables.BodyRotationTrackingLayerPrefix}_{poseLibrary.Guid}", poseLibrary));
+            }
+
             if (poseLibrary.EnableAudioMode)
             {
                 result.AddLayer(
@@ -317,6 +339,29 @@ namespace com.hhotatea.avatar_pose_library.logic
                 defaultFloat = 0f,
             };
             result.AddParameter(mirrorCycleOffsetParam);
+
+            if (poseLibrary.UseBodyRotationParam)
+            {
+                // ラジアルのブレンドツリーはコントローラー側のパラメーター名を参照するため、
+                // 式パラメーターに登録するだけでは足りません。アニメーターにも同じ名前で
+                // 登録しない場合、Unity はその名前を 0 として評価し、既定値とずれます。
+                foreach (var axis in ConstVariables.BodyRotationAxes)
+                {
+                    result.AddParameter(new AnimatorControllerParameter
+                    {
+                        name = $"{axis.ParameterPrefix}_{poseLibrary.Guid}",
+                        type = AnimatorControllerParameterType.Float,
+                        // 0 = 無回転。式パラメーターの既定値と必ず同じ値にしてください。
+                        // X/Z は 0、Y は 0.5 になります（ConstVariables.BodyRotationAxis 参照）。
+                        defaultFloat = axis.NeutralValue,
+                    });
+                }
+
+                // 「Reset Rotation」メニュー用のトリガー。
+                result.AddParameter(
+                    $"{ConstVariables.BodyRotationResetParamPrefix}_{poseLibrary.Guid}",
+                    AnimatorControllerParameterType.Bool);
+            }
 
             foreach (var param in poseLibrary.Parameters)
             {

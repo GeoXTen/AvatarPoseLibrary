@@ -25,6 +25,11 @@ namespace com.hhotatea.avatar_pose_library.component
         public MenuItem poseSpace;
         public MenuItem volume;
         public MenuItem variation;
+        public MenuItem bodyRotation;
+        public MenuItem bodyRotationX;
+        public MenuItem bodyRotationY;
+        public MenuItem bodyRotationZ;
+        public MenuItem bodyRotationReset;
 
         [Serializable]
         public class MenuItem
