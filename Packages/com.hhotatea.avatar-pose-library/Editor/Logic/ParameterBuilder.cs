@@ -54,13 +54,16 @@ namespace com.hhotatea.avatar_pose_library.logic
 
             if (library.enableHeightParam)
             {
+                // ポーズの選択状態によらず高さを適用するため、保存はしません。
+                // 保存すると、ポーズを選んでいない状態で前回の値が復元され、
+                // アバターが浮いたまま表示されてしまいます。
                 AddParameter(
                     parameters,
                     Name(ConstVariables.HeightParamPrefix, library.Guid),
                     ParameterSyncType.Float,
                     false,
                     0.5f,
-                    true);
+                    false);
             }
 
             if (library.enableSpeedParam)
@@ -71,6 +74,34 @@ namespace com.hhotatea.avatar_pose_library.logic
                     ParameterSyncType.Float,
                     false,
                     0.5f);
+            }
+
+            if (library.UseBodyRotationParam)
+            {
+                // 無回転の値は軸ごとに違うため、ConstVariables の定義から引きます
+                // （X/Z は 0、Y は 0.5）。式パラメーターの並び順は従来どおり X → Y → Z です。
+                foreach (var axis in new[]
+                         {
+                             ConstVariables.BodyRotationAxisX,
+                             ConstVariables.BodyRotationAxisY,
+                             ConstVariables.BodyRotationAxisZ,
+                         })
+                {
+                    AddParameter(
+                        parameters,
+                        Name(axis.ParameterPrefix, library.Guid),
+                        ParameterSyncType.Float,
+                        false,
+                        axis.NeutralValue,
+                        true);
+                }
+                // ラジアルを無回転へ戻すためのトリガー。既存の Reset と同じくローカル専用ですが、
+                // ドライバーが書き換える回転値そのものは同期されるため全員の表示が揃います。
+                AddParameter(
+                    parameters,
+                    Name(ConstVariables.BodyRotationResetParamPrefix, library.Guid),
+                    ParameterSyncType.Bool,
+                    true);
             }
 
             AddParameter(parameters, Name(ConstVariables.BaseParamPrefix, library.Guid), ParameterSyncType.Bool, true);

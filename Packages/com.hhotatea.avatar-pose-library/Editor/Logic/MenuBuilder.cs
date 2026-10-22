@@ -26,6 +26,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                 poseLibrary.enableSpeedParam ||
                 poseLibrary.enableMirrorParam ||
                 poseLibrary.enablePoseSpace ||
+                poseLibrary.UseBodyRotationParam ||
                 poseLibrary.enableTrackingParam)
             {
                 // 設定メニュー
@@ -183,6 +184,17 @@ namespace com.hhotatea.avatar_pose_library.logic
                 );
             }
 
+            if (poseLibrary.UseBodyRotationParam)
+            {
+                var bodyRotation = new GameObject(DynamicVariables.Settings.Menu.bodyRotation.title);
+                bodyRotation.transform.SetParent(parent.transform);
+                var mBodyRotation = bodyRotation.AddComponent<ModularAvatarMenuItem>();
+                mBodyRotation.MenuSource = SubmenuSource.Children;
+                mBodyRotation.Control.icon = DynamicVariables.Settings.Menu.bodyRotation.thumbnail;
+                mBodyRotation.Control.type = VRCExpressionsMenu.Control.ControlType.SubMenu;
+                BodyRotationMenu(mBodyRotation.transform, poseLibrary);
+            }
+
             if (poseLibrary.enableMirrorParam)
             {
                 CreateToggleMenu(
@@ -213,6 +225,40 @@ namespace com.hhotatea.avatar_pose_library.logic
                 mTracking.Control.type = VRCExpressionsMenu.Control.ControlType.SubMenu;
                 TrackingMenu(mTracking.transform, poseLibrary);
             }
+        }
+
+        static void BodyRotationMenu(Transform parent, AvatarPoseData poseLibrary)
+        {
+            CreateRadialMenu(
+                parent,
+                DynamicVariables.Settings.Menu.bodyRotationX.title,
+                DynamicVariables.Settings.Menu.bodyRotationX.thumbnail,
+                $"{ConstVariables.BodyRotationXParamPrefix}_{poseLibrary.Guid}"
+            );
+            CreateRadialMenu(
+                parent,
+                DynamicVariables.Settings.Menu.bodyRotationY.title,
+                DynamicVariables.Settings.Menu.bodyRotationY.thumbnail,
+                $"{ConstVariables.BodyRotationYParamPrefix}_{poseLibrary.Guid}"
+            );
+            CreateRadialMenu(
+                parent,
+                DynamicVariables.Settings.Menu.bodyRotationZ.title,
+                DynamicVariables.Settings.Menu.bodyRotationZ.thumbnail,
+                $"{ConstVariables.BodyRotationZParamPrefix}_{poseLibrary.Guid}"
+            );
+
+            // 3軸の傾きをまとめて無回転に戻す項目。
+            // タイトルは言語ファイルから取得し、未設定の古い MenuContext でも落ちないようにします。
+            var resetMenu = DynamicVariables.Settings.Menu.bodyRotationReset;
+            CreateToggleMenu(
+                parent,
+                resetMenu != null && !string.IsNullOrWhiteSpace(resetMenu.title)
+                    ? resetMenu.title
+                    : "Reset Rotation",
+                resetMenu != null ? resetMenu.thumbnail : null,
+                $"{ConstVariables.BodyRotationResetParamPrefix}_{poseLibrary.Guid}"
+            );
         }
 
         static void TrackingMenu(Transform parent, AvatarPoseData poseLibrary)

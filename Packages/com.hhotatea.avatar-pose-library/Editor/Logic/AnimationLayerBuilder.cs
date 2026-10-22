@@ -94,6 +94,20 @@ namespace com.hhotatea.avatar_pose_library.logic
                     value = 0.5f,
                 });
             }
+            if (poseLibrary.UseBodyRotationParam)
+            {
+                // 回転ラジアルも無回転に戻します（X/Z は左端 = 0 度、Y は中央 = 0 度）。
+                // 戻さない場合、リセット後も最後に選んだ傾きが残ります。
+                foreach (var axis in ConstVariables.BodyRotationAxes)
+                {
+                    paramReset.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+                    {
+                        type = VRC_AvatarParameterDriver.ChangeType.Set,
+                        name = $"{axis.ParameterPrefix}_{poseLibrary.Guid}",
+                        value = axis.NeutralValue,
+                    });
+                }
+            }
             paramReset.parameters.Add(new VRC_AvatarParameterDriver.Parameter
             {
                 type = VRC_AvatarParameterDriver.ChangeType.Set,
@@ -146,6 +160,185 @@ namespace com.hhotatea.avatar_pose_library.logic
             var defaultTransition = resetState.MakeTransition(defaultState, true);
 
             return layer;
+        }
+
+        /// <summary>
+        /// 回転ラジアルだけを無回転へ戻すレイヤーを作成します。
+        /// ポーズの選択や他の設定は維持したまま、X/Y/Z の傾きだけをリセットします。
+        /// </summary>
+        public AnimatorControllerLayer BodyRotationResetLayer(string param, AvatarPoseData poseLibrary)
+        {
+            // レイヤー作成
+            AnimatorControllerLayer layer = new AnimatorControllerLayer
+            {
+                name = param,
+                defaultWeight = 0f,
+                stateMachine = new AnimatorStateMachine(),
+                blendingMode = AnimatorLayerBlendingMode.Override,
+            };
+
+            // ステートの初期化
+            var defaultState = layer.stateMachine.AddState("Default");
+            defaultState.writeDefaultValues = writeDefault_;
+            defaultState.motion = MotionBuilder.FrameAnimation;
+
+            var resetState = layer.stateMachine.AddState("Reset");
+            resetState.writeDefaultValues = writeDefault_;
+            resetState.motion = MotionBuilder.FrameAnimation;
+
+            var paramReset = resetState.AddSafeParameterDriver();
+            foreach (var axis in ConstVariables.BodyRotationAxes)
+            {
+                paramReset.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name = $"{axis.ParameterPrefix}_{poseLibrary.Guid}",
+                    value = axis.NeutralValue,
+                });
+            }
+
+            // トリガー自身も戻し、メニューのトグルが押されたままにならないようにします。
+            paramReset.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+            {
+                type = VRC_AvatarParameterDriver.ChangeType.Set,
+                name = param,
+                value = 0,
+            });
+
+            // 遷移の設定
+            var resetTransition = defaultState.MakeTransition(resetState, true);
+            resetTransition.conditions = new AnimatorCondition[] {
+                new AnimatorCondition {
+                mode = AnimatorConditionMode.If,
+                parameter = param,
+                }
+            };
+
+            resetState.MakeTransition(defaultState, true);
+
+            return layer;
+        }
+
+        // ラジアル中央（無回転）付近とみなす許容幅。
+        const float RotationEpsilon = 0.002f;
+
+        /// <summary>
+        /// 回転ラジアルが無回転から外れている間だけ IK を切り、クリップ側の姿勢をそのまま表示します。
+        ///
+        /// 傾きをアニメーションで与えても、VRChat の IK は頭・手足のトラッキング位置に合わせて
+        /// 脊柱と脚を解き直します。そのためヨーが 90 度を超えたあたりで解が反転し、体が一瞬
+        /// 別の向きへ飛んでから戻る（スナップする）ように見えます。角度を制限しても、この競合は
+        /// 無くなりません。回転中だけ IK を切ることで、クリップ側の姿勢をそのまま出します。
+        /// </summary>
+        public AnimatorControllerLayer BodyRotationTrackingLayer(string param, AvatarPoseData poseLibrary)
+        {
+            // レイヤー作成
+            AnimatorControllerLayer layer = new AnimatorControllerLayer
+            {
+                name = param,
+                defaultWeight = 0f,
+                stateMachine = new AnimatorStateMachine(),
+                blendingMode = AnimatorLayerBlendingMode.Override,
+            };
+
+            // ステートの初期化
+            var neutralState = layer.stateMachine.AddState("Neutral");
+            neutralState.writeDefaultValues = writeDefault_;
+            neutralState.motion = MotionBuilder.NoneAnimation;
+
+            var rotatedState = layer.stateMachine.AddState("Rotated");
+            rotatedState.writeDefaultValues = writeDefault_;
+            rotatedState.motion = MotionBuilder.NoneAnimation;
+
+            // 回転中は姿勢をクリップに任せます（IK を切る）。
+            // 無回転側には何も置かず、ユーザーがメニューで設定したトラッキングを尊重します。
+            var tracking = rotatedState.AddSafeStateMachineBehaviour<VRCAnimatorTrackingControl>();
+            tracking.trackingHip = VRC_AnimatorTrackingControl.TrackingType.Animation;
+            tracking.trackingLeftFoot = VRC_AnimatorTrackingControl.TrackingType.Animation;
+            tracking.trackingRightFoot = VRC_AnimatorTrackingControl.TrackingType.Animation;
+            tracking.trackingLeftHand = VRC_AnimatorTrackingControl.TrackingType.Animation;
+            tracking.trackingRightHand = VRC_AnimatorTrackingControl.TrackingType.Animation;
+            tracking.trackingHead = VRC_AnimatorTrackingControl.TrackingType.Animation;
+
+            // 無回転の値は軸ごとに違います（X/Z は 0、Y は 0.5）。
+            var rotationAxes = ConstVariables.BodyRotationAxes;
+
+            // 無回転から外れたら IK を切ります。軸ごとに、無回転から離れる向きの遷移を張ります。
+            // パラメーターは 0..1 なので、無回転が端にある軸（X/Z は左端）は片側だけになります。
+            foreach (var axis in rotationAxes)
+            {
+                var parameter = $"{axis.ParameterPrefix}_{poseLibrary.Guid}";
+                var neutral = axis.NeutralValue;
+                if (neutral + RotationEpsilon < 1f)
+                {
+                    AddRotationCondition(neutralState, rotatedState, parameter,
+                        AnimatorConditionMode.Greater, neutral + RotationEpsilon);
+                }
+
+                if (neutral - RotationEpsilon > 0f)
+                {
+                    AddRotationCondition(neutralState, rotatedState, parameter,
+                        AnimatorConditionMode.Less, neutral - RotationEpsilon);
+                }
+            }
+
+            // 3軸すべてが無回転へ戻ったときだけ IK を戻します。
+            // 1軸でも傾いている間に戻すと、また競合してスナップします。
+            var backTransition = rotatedState.MakeTransition(neutralState, false);
+            backTransition.conditions = rotationAxes
+                .SelectMany(axis => NeutralConditions(axis, poseLibrary.Guid))
+                .ToArray();
+
+            return layer;
+        }
+
+        static void AddRotationCondition(
+            AnimatorState from, AnimatorState to, string parameter,
+            AnimatorConditionMode mode, float threshold)
+        {
+            var transition = from.MakeTransition(to, false);
+            transition.conditions = new AnimatorCondition[] {
+                new AnimatorCondition {
+                    mode = mode,
+                    parameter = parameter,
+                    threshold = threshold,
+                }
+            };
+        }
+
+        /// <summary>
+        /// その軸が無回転の近傍にあることを表す条件を作ります。
+        /// 無回転がパラメーター範囲の端にある軸（X/Z は左端 = 0）では、
+        /// 到達し得ない側の条件を作りません。
+        /// </summary>
+        static AnimatorCondition[] NeutralConditions(
+            ConstVariables.BodyRotationAxis axis, string guid)
+        {
+            var parameter = $"{axis.ParameterPrefix}_{guid}";
+            var neutral = axis.NeutralValue;
+            var conditions = new List<AnimatorCondition>(2);
+
+            if (neutral - RotationEpsilon > 0f)
+            {
+                conditions.Add(new AnimatorCondition
+                {
+                    mode = AnimatorConditionMode.Greater,
+                    parameter = parameter,
+                    threshold = neutral - RotationEpsilon,
+                });
+            }
+
+            if (neutral + RotationEpsilon < 1f)
+            {
+                conditions.Add(new AnimatorCondition
+                {
+                    mode = AnimatorConditionMode.Less,
+                    parameter = parameter,
+                    threshold = neutral + RotationEpsilon,
+                });
+            }
+
+            return conditions.ToArray();
         }
 
         public enum TrackingType
@@ -850,18 +1043,21 @@ namespace com.hhotatea.avatar_pose_library.logic
             AnimatorControllerLayer layer,
             AnimatorState defaultState,
             bool height, bool speed, bool mirror,
+            bool rotation,
             string guid)
         {
             bool isMove = MotionBuilder.IsMoveAnimation(pose.animationClip);
             var flags = pose.GetAnimatorFlag();
-            var anim = MotionBuilder.SafeAnimation(pose.animationClip, pose.beforeAnimationClip, pose.afterAnimationClip);
+            var anim = MotionBuilder.SafeAnimation(
+                pose.animationClip, pose.beforeAnimationClip, pose.afterAnimationClip);
 
             // メインステートの作成
             var poseState = layer.stateMachine.AddState("Pose_" + pose.Value.ToString());
             poseState.writeDefaultValues = writeDefault_;
             poseState.mirrorParameterActive = true;
             poseState.mirrorParameter = $"{ConstVariables.MirrorParamPrefix}_{guid}";
-            poseState.motion = anim.MakeLocomotionAnim(pose.tracking.loop, height, speed, guid);
+            poseState.motion = anim.MakeLocomotionAnim(
+                pose.tracking.loop, height, speed, guid, rotation, Vector3.zero);
             if (isMove)
             {
                 // スピードを制御可能にする
@@ -879,7 +1075,8 @@ namespace com.hhotatea.avatar_pose_library.logic
                 beforeState.writeDefaultValues = writeDefault_;
                 beforeState.mirrorParameterActive = true;
                 beforeState.mirrorParameter = $"{ConstVariables.MirrorParamPrefix}_{guid}";
-                beforeState.motion = pose.beforeAnimationClip.MakeLocomotionAnim(pose.tracking.loop, height, speed, guid);
+                beforeState.motion = pose.beforeAnimationClip.MakeLocomotionAnim(
+                    pose.tracking.loop, height, speed, guid, rotation, Vector3.zero);
 
                 // 遷移を作成
                 var joinTransition = defaultState.MakeTransition(beforeState, false);
@@ -920,7 +1117,8 @@ namespace com.hhotatea.avatar_pose_library.logic
                 afterState.writeDefaultValues = writeDefault_;
                 afterState.mirrorParameterActive = true;
                 afterState.mirrorParameter = $"{ConstVariables.MirrorParamPrefix}_{guid}";
-                afterState.motion = pose.afterAnimationClip.MakeLocomotionAnim(pose.tracking.loop, height, speed, guid);
+                afterState.motion = pose.afterAnimationClip.MakeLocomotionAnim(
+                    pose.tracking.loop, height, speed, guid, rotation, Vector3.zero);
 
                 // 遷移を作成
                 if (IsVariationMode)
