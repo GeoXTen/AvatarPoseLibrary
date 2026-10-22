@@ -38,11 +38,13 @@ APL は 2つの方法で導入することができます。
 3. **Add Repository** をクリック  
 4. 入力欄に以下の URL を貼り付け  
    ```text
-   https://HhotateA.github.io/AvatarPoseLibrary/index.json
+   https://GeoXTen.github.io/AvatarPoseLibrary/index.json
    ```  
 5. **Add** をクリック  
 6. リポジトリ情報を確認し、**I Understand** をクリック  
 7. 任意のプロジェクトの **Manage Project** から APL を追加
+
+> **注意:** このフォークの VCC リストは `build-listing.yml` が生成します。パッケージ ID が上流と同一（`com.hhotatea.avatar-pose-library`）のため、上流のリスト（`https://HhotateA.github.io/AvatarPoseLibrary/index.json`）を**同時に追加しないでください**。追加すると VCC は上流の **1.2.44** を解決し、このビルドの変更が反映されません。
 
 ### 2. UnityPackage 経由での導入
 

@@ -38,7 +38,7 @@ APL は 2つの方法で導入することができます。
 3. **Add Repository** をクリック  
 4. 入力欄に以下の URL を貼り付け  
    ```text
-   https://HhotateA.github.io/AvatarPoseLibrary/index.json
+   https://GeoXTen.github.io/AvatarPoseLibrary/index.json
    ```  
 5. **Add** をクリック  
 6. リポジトリ情報を確認し、**I Understand** をクリック  
