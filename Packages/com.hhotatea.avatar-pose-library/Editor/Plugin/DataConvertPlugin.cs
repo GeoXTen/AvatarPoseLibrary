@@ -186,7 +186,7 @@ namespace com.hhotatea.avatar_pose_library.editor
                 var ma_rotation = result.AddComponent<ModularAvatarMergeAnimator>();
                 ConfigureMergeAnimator(
                     ma_rotation,
-                    BodyRotationRigBuilder.BuildAnimator(data),
+                    BodyRotationRigBuilder.BuildAnimator(data, root),
                     VRCAvatarDescriptor.AnimLayerType.FX,
                     false);
             }
