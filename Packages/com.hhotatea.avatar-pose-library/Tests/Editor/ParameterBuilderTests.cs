@@ -135,7 +135,7 @@ namespace com.hhotatea.avatar_pose_library.tests
             {
                 Assert.That(MotionBuilder.IsMoveAnimation(clip), Is.True);
 
-                controller = AnimatorBuilder.BuildLocomotionAnimator(data, false);
+                controller = AnimatorBuilder.BuildLocomotionAnimator(data, false, false);
                 var poseState = controller.layers
                     .SelectMany(layer => layer.stateMachine.states)
                     .Select(child => child.state)

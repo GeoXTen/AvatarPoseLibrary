@@ -317,6 +317,11 @@ namespace com.hhotatea.avatar_pose_library.logic
             var rotation = GetOrAddRotationConstraint(armature);
             rotation.IsActive = true;
             rotation.GlobalWeight = 1f;
+            // 再利用した制約が無効（enabled = false）のまま残っている場合があります。
+            // 無効なコンポーネントは制約を解かないため、IsActive も GlobalWeight も
+            // 立っているのに鎖だけが回って体が付いてこない、という状態になります。
+            // 見た目からは原因が分からないので、ここで必ず有効にします。
+            rotation.enabled = true;
             // 軸の除外が残っていると、その軸だけ回り切らないため解除します。
             rotation.AffectsRotationX = true;
             rotation.AffectsRotationY = true;
@@ -336,6 +341,9 @@ namespace com.hhotatea.avatar_pose_library.logic
             var position = GetOrAddPositionConstraint(armature);
             position.IsActive = true;
             position.GlobalWeight = 1f;
+            // 回転側と同じ理由で、無効なままの制約を有効に戻します。
+            // 位置が効かないと、体を傾けたときに支点から弧を描いてずれます。
+            position.enabled = true;
             position.AffectsPositionX = true;
             position.AffectsPositionY = true;
             position.AffectsPositionZ = true;
@@ -504,6 +512,17 @@ namespace com.hhotatea.avatar_pose_library.logic
         /// </summary>
         public static AnimatorController BuildAnimator(AvatarPoseData poseLibrary)
         {
+            return BuildAnimator(poseLibrary, null);
+        }
+
+        /// <summary>
+        /// 回転専用の AnimatorController を組み立てます。
+        ///
+        /// <paramref name="avatarRoot"/> を渡すと、アーマチュアの制約を常時有効に保つ
+        /// カーブも一緒に焼き込みます（<see cref="AddConstraintEnableCurves"/> を参照）。
+        /// </summary>
+        public static AnimatorController BuildAnimator(AvatarPoseData poseLibrary, GameObject avatarRoot)
+        {
             var controller = new AnimatorController();
 
             foreach (var axis in ConstVariables.BodyRotationAxes)
@@ -538,7 +557,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                     AnimatorControllerParameterType.Bool);
             }
 
-            AddLayers(controller, poseLibrary);
+            AddLayers(controller, poseLibrary, ResolveConstraintBindingPath(avatarRoot));
             return controller;
         }
 
@@ -550,15 +569,20 @@ namespace com.hhotatea.avatar_pose_library.logic
         /// </summary>
         public static void AddLayers(AnimatorController controller, AvatarPoseData poseLibrary)
         {
+            AddLayers(controller, poseLibrary, null);
+        }
+
+        static void AddLayers(AnimatorController controller, AvatarPoseData poseLibrary, string constraintPath)
+        {
             // 回転軸・角度範囲は ConstVariables.BodyRotationAxes が唯一の定義元です。
             foreach (var axis in ConstVariables.BodyRotationAxes)
             {
-                AddAxisLayer(controller, poseLibrary, axis);
+                AddAxisLayer(controller, poseLibrary, axis, constraintPath);
             }
 
             if (UsesRigHeight(poseLibrary))
             {
-                AddHeightLayer(controller, poseLibrary);
+                AddHeightLayer(controller, poseLibrary, constraintPath);
             }
         }
 
@@ -577,7 +601,8 @@ namespace com.hhotatea.avatar_pose_library.logic
         static void AddAxisLayer(
             AnimatorController controller,
             AvatarPoseData poseLibrary,
-            ConstVariables.BodyRotationAxis axis)
+            ConstVariables.BodyRotationAxis axis,
+            string constraintPath)
         {
             var parameter = $"{axis.ParameterPrefix}_{poseLibrary.Guid}";
             var layerName = $"{ConstVariables.BodyRotationRigLayerPrefix}_{axis.AxisName}_{poseLibrary.Guid}";
@@ -617,7 +642,7 @@ namespace com.hhotatea.avatar_pose_library.logic
                 // 無回転の位置は軸ごとに違います（X/Z は左端 0%、Y は中央 50%）。
                 // 角度は ConstVariables の MinAngle〜MaxAngle をそのまま等分します。
                 var angle = axis.AngleAt(rate);
-                blendTree.AddChild(BuildAxisClip(axis.AxisName, axis.Axis, angle), rate);
+                blendTree.AddChild(BuildAxisClip(axis.AxisName, axis.Axis, angle, constraintPath), rate);
             }
         }
 
@@ -627,7 +652,7 @@ namespace com.hhotatea.avatar_pose_library.logic
         /// 書き込む先は鎖の Transform で、ボーンではありません。
         /// アーマチュアは制約経由で追従するため、ボーンパスは一切変わりません。
         /// </summary>
-        static AnimationClip BuildAxisClip(string axisName, Vector3 axis, float angle)
+        static AnimationClip BuildAxisClip(string axisName, Vector3 axis, float angle, string constraintPath)
         {
             var clip = new AnimationClip
             {
@@ -643,6 +668,8 @@ namespace com.hhotatea.avatar_pose_library.logic
             SetConstant(clip, path, "m_LocalRotation.y", rotation.y);
             SetConstant(clip, path, "m_LocalRotation.z", rotation.z);
             SetConstant(clip, path, "m_LocalRotation.w", rotation.w);
+
+            AddConstraintEnableCurves(clip, constraintPath);
 
             return clip;
         }
@@ -661,7 +688,7 @@ namespace com.hhotatea.avatar_pose_library.logic
         /// 高さパラメーターは保存しないため、前回の値が別ワールドで
         /// アバターを浮かせたまま表示することはありません。
         /// </summary>
-        static void AddHeightLayer(AnimatorController controller, AvatarPoseData poseLibrary)
+        static void AddHeightLayer(AnimatorController controller, AvatarPoseData poseLibrary, string constraintPath)
         {
             var parameter = $"{ConstVariables.HeightParamPrefix}_{poseLibrary.Guid}";
             var layerName =
@@ -698,14 +725,14 @@ namespace com.hhotatea.avatar_pose_library.logic
 
             // ポーズ側の BuildMotionLevel と同じ幅・同じ向きで動かします。
             var range = DynamicVariables.Settings.minMaxHeight;
-            blendTree.AddChild(BuildHeightClip(range), 0f);
-            blendTree.AddChild(BuildHeightClip(-range), 1f);
+            blendTree.AddChild(BuildHeightClip(range, constraintPath), 0f);
+            blendTree.AddChild(BuildHeightClip(-range, constraintPath), 1f);
         }
 
         /// <summary>
         /// Height の localPosition.y だけを書き込んだクリップを作ります。
         /// </summary>
-        static AnimationClip BuildHeightClip(float level)
+        static AnimationClip BuildHeightClip(float level, string constraintPath)
         {
             var clip = new AnimationClip
             {
@@ -716,12 +743,72 @@ namespace com.hhotatea.avatar_pose_library.logic
 
             SetConstant(clip, HeightBindingPath, "m_LocalPosition.y", level);
 
+            AddConstraintEnableCurves(clip, constraintPath);
+
             return clip;
+        }
+
+        /// <summary>
+        /// 制約の enabled を常時 1 に保つカーブを、リグのクリップへ足します。
+        ///
+        /// Avatar Optimizer の Trace and Optimize は、
+        /// 「enabled がアニメーションされている」コンポーネントの有効/無効を
+        /// 書き換えません（FindUnusedObjectsProcessor の ContainsAnimationForFloat 判定）。
+        /// カーブが無いと、リグからしか参照されていないと判断された制約が
+        /// enabled = false で焼かれ、鎖だけが回って体が付いてこない状態になります。
+        /// 見た目からは原因が分からないため、ここで明示的に固定します。
+        ///
+        /// 値は制約を付けた時点の状態（有効）と同じなので、
+        /// 再生結果は変わりません。書き込み先はアーマチュアです。
+        /// </summary>
+        static void AddConstraintEnableCurves(AnimationClip clip, string constraintPath)
+        {
+            if (string.IsNullOrEmpty(constraintPath))
+            {
+                return;
+            }
+
+            SetConstant(clip, constraintPath, typeof(VRCRotationConstraint), "m_Enabled", 1f);
+            SetConstant(clip, constraintPath, typeof(VRCPositionConstraint), "m_Enabled", 1f);
+        }
+
+        /// <summary>
+        /// 制約が載っている Transform のバインディングパスを返します。
+        /// アーマチュアはアバタールート直下にあるため、名前がそのままパスになります。
+        /// 解決できない場合は null（カーブを足さない）を返します。
+        /// </summary>
+        static string ResolveConstraintBindingPath(GameObject avatarRoot)
+        {
+            if (avatarRoot == null)
+            {
+                return null;
+            }
+
+            var armature = FindArmatureRoot(avatarRoot);
+            if (armature == null)
+            {
+                // カーブが入らないと Avatar Optimizer に制約を無効化され得るため、
+                // 黙って続けずに理由を残します。
+                Debug.LogWarning(
+                    "AvatarPoseLibrary: Could not resolve the armature for the body rotation rig. " +
+                    "The constraints are not pinned enabled, so an avatar optimizer may disable them.");
+                return null;
+            }
+
+            return armature.name;
         }
 
         static void SetConstant(AnimationClip clip, string path, string property, float value)
         {
             clip.SetCurve(path, typeof(Transform), property, AnimationCurve.Constant(0f, 1f, value));
+        }
+
+        /// <summary>
+        /// Transform 以外（制約コンポーネントなど）へ定数を書き込みます。
+        /// </summary>
+        static void SetConstant(AnimationClip clip, string path, Type type, string property, float value)
+        {
+            clip.SetCurve(path, type, property, AnimationCurve.Constant(0f, 1f, value));
         }
 
         /// <summary>
