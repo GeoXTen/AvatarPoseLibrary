@@ -245,6 +245,14 @@ namespace com.hhotatea.avatar_pose_library.logic
                     return false;
                 }
 
+                // 制約が無効・Weight 0 のままだと、鎖だけが回って体が付いてきません。
+                // 見た目が静かに壊れるため、こちらも作り直しの対象にします。
+                if (!constraint.constraintActive || constraint.weight <= 0f)
+                {
+                    reason = $"'{armature.name}' has a RotationConstraint driven by the rig, but it is inactive or its weight is 0.";
+                    return false;
+                }
+
                 hasRotation = true;
                 break;
             }
@@ -266,6 +274,12 @@ namespace com.hhotatea.avatar_pose_library.logic
                 if (!constraint.locked)
                 {
                     reason = $"'{armature.name}' has a PositionConstraint driven by the rig, but it is not locked.";
+                    return false;
+                }
+
+                if (!constraint.constraintActive || constraint.weight <= 0f)
+                {
+                    reason = $"'{armature.name}' has a PositionConstraint driven by the rig, but it is inactive or its weight is 0.";
                     return false;
                 }
 
@@ -666,10 +680,12 @@ namespace com.hhotatea.avatar_pose_library.logic
             };
             state.motion = blendTree;
 
+            // AnimPosePlay は Float なので、Bool 専用の If/IfNot ではなく
+            // Float 用の Greater/Less（しきい値 0.5）で判定します。
             var enter = idleState.MakeTransition(state, false);
-            enter.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = playParam } };
+            enter.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.Greater, threshold = 0.5f, parameter = playParam } };
             var exit = state.MakeTransition(idleState, false);
-            exit.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = playParam } };
+            exit.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.Less, threshold = 0.5f, parameter = playParam } };
 
             var steps = Mathf.Max(2, ConstVariables.BodyRotationSteps);
             for (var index = 0; index < steps; index++)
@@ -764,10 +780,12 @@ namespace com.hhotatea.avatar_pose_library.logic
             };
             state.motion = blendTree;
 
+            // AnimPosePlay は Float なので、Bool 専用の If/IfNot ではなく
+            // Float 用の Greater/Less（しきい値 0.5）で判定します。
             var enter = idleState.MakeTransition(state, false);
-            enter.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.If, parameter = playParam } };
+            enter.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.Greater, threshold = 0.5f, parameter = playParam } };
             var exit = state.MakeTransition(idleState, false);
-            exit.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.IfNot, parameter = playParam } };
+            exit.conditions = new[] { new AnimatorCondition { mode = AnimatorConditionMode.Less, threshold = 0.5f, parameter = playParam } };
 
             // ポーズ側の BuildMotionLevel と同じ幅・同じ向きで動かします。
             var range = DynamicVariables.Settings.minMaxHeight;
