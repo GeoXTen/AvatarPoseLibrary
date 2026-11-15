@@ -541,17 +541,22 @@ namespace com.hhotatea.avatar_pose_library.logic
         {
             var controller = new AnimatorController();
 
-            foreach (var axis in ConstVariables.BodyRotationAxes)
+            if (poseLibrary.UseBodyRotationParam)
             {
-                // 既定値は式パラメーター・BaseAnimator 側と必ず揃えます。
-                // ずれるとレイヤー起動直後に体が片側へ傾いた状態で始まります。
-                // X/Z の無回転は 0、Y の無回転は 0.5 です。
-                controller.AddParameter(new AnimatorControllerParameter
+                foreach (var axis in ConstVariables.BodyRotationAxes)
                 {
-                    name = $"{axis.ParameterPrefix}_{poseLibrary.Guid}",
-                    type = AnimatorControllerParameterType.Float,
-                    defaultFloat = axis.NeutralValue,
-                });
+                    // 既定値は式パラメーター・BaseAnimator 側と必ず揃えます。
+                    // ずれるとレイヤー起動直後に体が片側へ傾いた状態で始まります。
+                    // X/Z の無回転は 0、Y の無回転は 0.5 です。
+                    // 体の回転が無効なライブラリでは宣言しません（高さだけのリグで
+                    // 未使用の同期 Float パラメーターを 3 つ消費しないため）。
+                    controller.AddParameter(new AnimatorControllerParameter
+                    {
+                        name = $"{axis.ParameterPrefix}_{poseLibrary.Guid}",
+                        type = AnimatorControllerParameterType.Float,
+                        defaultFloat = axis.NeutralValue,
+                    });
+                }
             }
 
             // ポーズ選択中だけ回転・高さを反映するためのゲートに使います。
@@ -592,9 +597,12 @@ namespace com.hhotatea.avatar_pose_library.logic
         static void AddLayers(AnimatorController controller, AvatarPoseData poseLibrary, string constraintPath)
         {
             // 回転軸・角度範囲は ConstVariables.BodyRotationAxes が唯一の定義元です。
-            foreach (var axis in ConstVariables.BodyRotationAxes)
+            if (poseLibrary.UseBodyRotationParam)
             {
-                AddAxisLayer(controller, poseLibrary, axis, constraintPath);
+                foreach (var axis in ConstVariables.BodyRotationAxes)
+                {
+                    AddAxisLayer(controller, poseLibrary, axis, constraintPath);
+                }
             }
 
             if (UsesRigHeight(poseLibrary))

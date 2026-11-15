@@ -51,7 +51,12 @@ namespace com.hhotatea.avatar_pose_library.editor
                             // リグがあれば回らない Transform を動かし、無ければ従来どおり
                             // ポーズのクリップへ焼き込みます。
                             var rigHeight = false;
-                            if (d.UseBodyRotationParam)
+                            // Height must use the constraint rig whenever it is available, even when body
+                            // rotation is off. The locomotion fallback bakes the offset into
+                            // AnimationClipSettings.level (root motion), which VRChat hides from the owner
+                            // but shows to remote players -> the avatar appears to float/sink for others.
+                            var wantsRigHeight = BodyRotationRigBuilder.UsesRigHeight(d);
+                            if (d.UseBodyRotationParam || wantsRigHeight)
                             {
                                 // 体全体の回転はポーズへ焼き込まず、アーマチュアの親に
                                 // 挟んだ Transform を Animator で回して合成します。
@@ -59,11 +64,11 @@ namespace com.hhotatea.avatar_pose_library.editor
                                 var rig = BodyRotationRigBuilder.EnsureRig(ctx.AvatarRootObject);
                                 // リグ側で高さを扱えるのは、ポーズ選択を検出できる
                                 // FX アニメーターがあるときだけです。
-                                rigHeight = rig != null && BodyRotationRigBuilder.UsesRigHeight(d);
+                                rigHeight = rig != null && wantsRigHeight;
                                 // Unity の Play モードは VRChat の制約を評価しないため、
                                 // プレビュー中だけ制約と同じ計算を毎フレーム適用します。
                                 // アップロードビルドでは追加されません。
-                                BodyRotationRigBuilder.AttachPreviewDriver(ctx.AvatarRootObject);
+                                if (d.UseBodyRotationParam || rigHeight) BodyRotationRigBuilder.AttachPreviewDriver(ctx.AvatarRootObject);
                             }
 
                             var assets = GetAssetCache(d, d.enableUseCache, rigHeight);
@@ -178,7 +183,7 @@ namespace com.hhotatea.avatar_pose_library.editor
                 matchAvatarWriteDefaults);
 
             // リグを作れなかった場合（アーマチュア未検出など）はレイヤーも足しません。
-            if (data.UseBodyRotationParam &&
+            if ((data.UseBodyRotationParam || BodyRotationRigBuilder.UsesRigHeight(data)) &&
                 root.transform.Find(ConstVariables.BodyRotationRigRootName) != null)
             {
                 // 体全体の回転。ポーズへ焼き込まず、アーマチュアの親に挟んだ
